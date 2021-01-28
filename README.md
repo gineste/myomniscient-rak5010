@@ -29,6 +29,6 @@ Template for firmware projects which contain mainly C language.
 
 We need to configure the IDE to run the scripts automatically.
 
-In **pre-build step**, for any build configuration, enter this command:	*sh ../updateVersion.sh*
+In **pre-build step**, for any build configuration, enter this command:	sh ../updateVersion.sh
 
-In **post-build step**, for release build configuration, enter this command:	*"../../output/GenerateHex.bat" ${ProjName}*
+In **post-build step**, for release build configuration, enter this command:	"../../output/GenerateHex.bat" ${ProjName}
