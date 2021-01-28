@@ -2,6 +2,8 @@
 
 Template for firmware projects which contain mainly C language.
 
+### Architecture
+
 - **docs**
   - fw
     - .zip, code examples, flowchart, documentation, environmental information, ...
@@ -22,3 +24,11 @@ Template for firmware projects which contain mainly C language.
   - GenerateHex.bat (script generating hex file with version number)
 - **.gitignore**
 - **README.md** (should contain a description of the project.)
+
+### Configure IDE for the scripts
+
+We need to configure the IDE to run the scripts automatically.
+
+In **pre-build step**, for any build configuration, enter this command:	*sh ../updateVersion.sh*
+
+In **post-build step**, for release build configuration, enter this command:	*"../../output/GenerateHex.bat" ${ProjName}*

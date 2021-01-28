@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version_h="./Version.h"
+version_h="../Version.h"
 echo "=========================== UPDATE INFO ================================"
 lineNumberCommit=`grep -n COMMIT_NUMBER $version_h | cut -d: -f1`
 if [ -z $lineNumberCommit ]; then
