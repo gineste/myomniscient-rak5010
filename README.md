@@ -16,7 +16,17 @@ Template for firmware projects which contain mainly C language.
 - **src**
   - updateVersion.sh (script updating commit and build infos in Version.h)
   - Version.h
-  - project / source files
+  - header.h.template
+  - source.c.template
+  - app
+  - config
+    - board-config.h
+  - statem
+  - drivers
+  - libs
+    - exotic
+      - defs.h
+  - middlewares
 - **output**
   - hex
     - all version .hex files
