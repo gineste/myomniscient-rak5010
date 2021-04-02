@@ -38,7 +38,7 @@ DEL SVersion
 REM Generate Package Zip
 ECHO.
 ECHO Copy Hex file...
-xcopy /y ..\..\src\Debug\*.hex ..\..\output\hex\%1_v%FirmVersion%.hex*
+xcopy /y ..\..\src\Release\*.hex ..\..\output\hex\%1_v%FirmVersion%.hex*
 
 ECHO %1_v%FirmVersion%.hex
 
