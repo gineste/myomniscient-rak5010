@@ -13,7 +13,7 @@ SETLOCAL
 SET Line = ""
 SET FirstQuote = 0
 
-FOR /F "tokens=* delims=" %%X in ('type ".\..\..\src\Version.h"^| Find /i "#define FW_VERSION "') DO SET Line=%%X > NUL
+FOR /F "tokens=* delims=" %%X in ('type ".\..\src\Version.h"^| Find /i "#define FW_VERSION "') DO SET Line=%%X > NUL
 
 SET SStrg="^""
 SET StrgTemp=%Line%&SET Position=0
@@ -38,8 +38,9 @@ DEL SVersion
 REM Generate Package Zip
 ECHO.
 ECHO Copy Hex file...
-xcopy /y ..\..\src\Release\*.hex ..\..\output\hex\%1_v%FirmVersion%.hex*
+[ ! -d .\Release ] && mkdir .\Release
+xcopy /y .\..\src\Release\*.hex .\Release\%1_v%FirmVersion%.hex*
 
-ECHO %1_v%FirmVersion%.hex
+ECHO %1_v%FirmVersion%.hex created
 
 ECHO.
