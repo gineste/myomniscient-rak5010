@@ -4,7 +4,7 @@
  *  ) _)  )  ( (  O )  )(    )(  ( (__   \___ \ )  / \___ \  )(   ) _) / \/ \\___ \
  * (____)(_/\_) \__/  (__)  (__)  \___)  (____/(__/  (____/ (__) (____)\_)(_/(____/
  *
- * Copyright (c) 2017 EXOTIC SYSTEMS. All Rights Reserved.
+ * Copyright (c) 2021 EXOTIC SYSTEMS. All Rights Reserved.
  *
  * Licensees are granted free, non-transferable use of the information. NO
  * WARRANTY of ANY KIND is provided. This heading must NOT be removed from
