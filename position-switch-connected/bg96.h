@@ -4,14 +4,14 @@
  *    ) _)  )  ( (  O )  )(    )(  ( (__   \___ \ )  / \___ \  )(   ) _) / \/ \\___ \     
  *   (____)(_/\_) \__/  (__)  (__)  \___)  (____/(__/  (____/ (__) (____)\_)(_/(____/
  *
- * Copyright (c) ${year} EXOTIC SYSTEMS. All Rights Reserved.
+ * Copyright (c) 2021 EXOTIC SYSTEMS. All Rights Reserved.
  *
  * Licensees are granted free, non-transferable use of the information. NO WARRANTY 
  * of ANY KIND is provided. This heading must NOT be removed from the file.
  *
  */
-#ifndef ${include_guard_symbol}
-#define ${include_guard_symbol}
+#ifndef BG96_H_
+#define BG96_H_
 
 /****************************************************************************************
  * Include Files
@@ -28,5 +28,8 @@
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
+void bg96_init();         //bg96 power up
+void bg96_at(char *at);   //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
+void gps_show();          //gps data
 
-#endif /* ${include_guard_symbol} */
+#endif /* BG96_H_ */
