@@ -19,7 +19,7 @@
    Include Files
  ****************************************************************************************/
 #include <SoftwareSerial.h>
-#include <Wire.h>
+#include <Arduino.h>
 #include <math.h>
 #include <Arduino_nRF5x_lowPower.h> // LowPower Library for nRF5x
 
@@ -31,7 +31,9 @@
 /****************************************************************************************
    Defines
  ****************************************************************************************/
-
+#ifdef DEBUG
+  #define SERIAL_DEBUG_BAUDRATE   (115200)
+#endif
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -39,12 +41,14 @@
 /****************************************************************************************
    Private function declarations
  ****************************************************************************************/
+static void nrf_io3_it_cb();  // trailer full interrupt CB
+static void nrf_io4_it_cb();  // trailer empty interrupt CB
 
 /****************************************************************************************
    Variable declarations
  ****************************************************************************************/
-TwoWire *wi_i2c = &Wire;
-const int baudrate = 115200;
+uint8_t g_u8FlagFull = 0;     // trailer full flag
+uint8_t g_u8FlagEmpty = 0;    // trailer empty flag
 
 /****************************************************************************************
    Public functions
@@ -57,11 +61,20 @@ const int baudrate = 115200;
 /**************************************************************************/
 void setup()
 {
-
-  Serial.begin (baudrate);
+#ifdef DEBUG
+  Serial.begin (SERIAL_DEBUG_BAUDRATE);
   while ( !Serial ) delay(10);   // for nrf52840 with native usb
   Serial.printf("%s\n", "********************EXOTIC SYSTEMS 2021************************");
+#endif
 
+  pinMode(LED_GREEN_PIN, OUTPUT);
+  pinMode(NRF_IO3, INPUT_PULLUP);
+  pinMode(NRF_IO4, INPUT_PULLUP);
+  
+  attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
+  attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
+
+  //bg96_init();
   //nRF5x_lowPower.powerMode(POWER_MODE_OFF);
 }
 
@@ -72,14 +85,42 @@ void setup()
 /**************************************************************************/
 void loop()
 {
+#ifdef DEBUG
   Serial.println("loop");
-  delay(4000);
+  delay(1000);
+#endif
+
+  // trailer is full
+  if (g_u8FlagFull == 1u)
+  {
+    g_u8FlagFull = 0u;
+    if (digitalRead(NRF_IO4) == HIGH)
+    {
+      digitalWrite(LED_GREEN_PIN, HIGH);   
+    }
+  }
+
+  // trailer is empty
+  if (g_u8FlagEmpty == 1u)
+  {
+    g_u8FlagEmpty = 0u;
+    if (digitalRead(NRF_IO3) == HIGH)
+    {
+      digitalWrite(LED_GREEN_PIN, LOW);   
+    }
+  }
 }
 
 /****************************************************************************************
    Private functions
  ****************************************************************************************/
+static void nrf_io3_it_cb() {
+  g_u8FlagFull = 1;
+}
 
+static void nrf_io4_it_cb() {
+  g_u8FlagEmpty = 1;
+}
 /****************************************************************************************
    End Of File
  ****************************************************************************************/

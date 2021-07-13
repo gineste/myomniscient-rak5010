@@ -20,12 +20,20 @@
 /****************************************************************************************
  * Defines
  ****************************************************************************************/
-#define BG96_RX_PIN  (6)
-#define BG96_TX_PIN  (8)
+
+//#define DEBUG
 
 #define APN_URL             "sl2sfr"
 #define APN_USERNAME        ""
 #define APN_PASSWORD        ""
+
+#define BG96_RX_PIN  (6)
+#define BG96_TX_PIN  (8)
+
+#define LED_GREEN_PIN (12)
+
+#define NRF_IO3       (34)
+#define NRF_IO4       (33)
 
 /****************************************************************************************
  * Type definitions
