@@ -24,12 +24,23 @@
 /****************************************************************************************
  * Type definitions
  ****************************************************************************************/
+ typedef enum _BG96_ERR_CODE_{
+ BG96_SUCCESS,
+  BG96_ERROR_PARAM,
+  BG96_ERROR_FAILED,
+  BG96_ERROR_TRANSMIT,
+  BG96_ERROR_TIMEOUT,
+  BG96_ERROR_REFUSED,
 
+  BG96_ERROR_MAXID
+} eBG96ErrorCode_t;
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
 void bg96_init();         //bg96 power up
 void bg96_at(char *at);   //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 void gps_show();          //gps data
+eBG96ErrorCode_t  eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword);
+eBG96ErrorCode_t  eBG96_ActiveContext(void);
 
 #endif /* BG96_H_ */
