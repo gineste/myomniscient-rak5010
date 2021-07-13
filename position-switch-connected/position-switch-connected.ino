@@ -74,7 +74,19 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
   attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
 
-  //bg96_init();
+  bg96_init();
+  Serial1.begin(SERIAL_DEBUG_BAUDRATE);
+  while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
+  delay(5000);
+  bg96_at("ATE1"); //turn off the echo mode  (ATE1  echo on)
+  delay(1000);
+  //Serial.print("AT+QGPSCFG");
+  bg96_at("AT+QGPSCFG=\"gpsnmeatype\",1");
+  delay(1000);
+  //Serial.print("AT+QGPS");
+  bg96_at("AT+QGPS=1, 1, 1, 1, 1");
+  delay(1000);
+  
   //nRF5x_lowPower.powerMode(POWER_MODE_OFF);
 }
 
@@ -97,6 +109,7 @@ void loop()
     if (digitalRead(NRF_IO4) == HIGH)
     {
       digitalWrite(LED_GREEN_PIN, HIGH);   
+      connect();
     }
   }
 

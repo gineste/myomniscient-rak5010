@@ -97,6 +97,70 @@ void gps_show()
   bg96_rsp="";
 }
 
+//network connect
+void connect() {
+  //Serial.println("Trying to connect base station of operator (AT+CGATT)...");
+  
+  bg96_at("AT+CGATT=1"); //Connect to network
+  delay(3000);
+
+  bg96_at("AT+QCFG=1"); //GSM mode
+  delay(2000);
+
+ 
+  //Serial.println("send APN...");
+  bg96_at("AT+QICSGP=1,1,\"sl2sfr\",\"\",\"\",1");
+  delay(2000);
+  
+  //Serial.println("get network info...");
+  bg96_at("AT+QNWINFO");
+  delay(2000);
+
+  //Serial.println("QIACT...");
+  bg96_at("AT+QIACT=1");
+  delay(2000);
+
+  bg96_at("AT+QIACT=?");
+  delay(2000);
+
+  //Serial.println("get time");
+  bg96_at("AT+QLTS=1"); //query GMT time from network
+  delay(2000);
+
+  bg96_at("AT+QHTTPCFG=\"contextid\",1");
+  delay(2000);
+
+  bg96_at("AT+QHTTPCFG=\"responseheader\",1");
+  delay(2000);
+
+  //GET request
+  //bg96_at("AT+QHTTPURL=17,80");
+  //delay(3000);
+  //Serial1.write("http://google.fr/\r");
+  //delay(2000);
+  //bg96_at("AT+QHTTPGET=80");
+  //delay(2000);
+
+  //POST request
+  bg96_at("AT+QHTTPURL=57,80"); //57 is length of the url
+  delay(3000);
+  Serial1.write("https://webhook.site/b80027c3-ec69-4694-b32d-b640549c6213\r");
+  delay(3000);
+  bg96_at("AT+QHTTPPOST=48,80,80");//48 is length of the post data
+  delay(3000);
+  Serial1.write("{location:{position:{lat:49.12345,lon:0.12345}}}\r");
+   
+  delay(3000);
+  bg96_at("AT+QHTTPREAD=80");
+  //delay(3000);
+  bg96_rsp="";
+  while (Serial1.available()) {
+    bg96_rsp += char(Serial1.read());
+    delay(2);
+  }
+  Serial.print(bg96_rsp); 
+}
+
 /**@brief Set Apn information
  * @param p_pchApn         Apn operator address
  * @param p_pchUser        Apn access username

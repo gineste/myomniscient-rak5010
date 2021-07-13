@@ -40,6 +40,7 @@
 void bg96_init();         //bg96 power up
 void bg96_at(char *at);   //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 void gps_show();          //gps data
+void connect();
 eBG96ErrorCode_t  eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword);
 eBG96ErrorCode_t  eBG96_ActiveContext(void);
 
