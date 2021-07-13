@@ -1,44 +1,10 @@
-# firmware-c
+# proto-rak5010-arduino
 
-Template for firmware projects which contain mainly C language.
+Prototype of connected position switch with RAK5010 and arduino.
 
-### Architecture
+### Bootloader
 
-- **docs**
-  - fw
-    - .zip, code examples, flowchart, documentation, environmental information, ...
-  - hw
-    - schematic, datasheets, ...
-  - meas
-    - power consumption, battery profile, ...
-  - project
-    - specifications, planning, goals, ... 
-- **src**
-  - updateVersion.sh (script updating commit and build infos in Version.h)
-  - Version.h
-  - header.h.template
-  - source.c.template
-  - app
-  - config
-    - board-config.h
-  - statem
-  - drivers
-  - libs
-    - exotic
-      - defs.h
-  - middlewares
-- **output**
-  - hex
-    - all version .hex files
-  - change-log.txt (release note)
-  - GenerateHex.bat (script generating hex file with version number)
-- **.gitignore**
-- **README.md** (should contain a description of the project.)
+In order to utilize Arduino with RAK5010, the first step is to flash the specific bootloader located here in the project folder: position-switch-connected\proto-rak5010-arduino\output\hex\feather_nrf52840_express_bootloader-0.2.13_s140_6.1.1.hex
 
-### Configure IDE for the scripts
+To brun the bootloader, you can use a JLINK (see the official [doc](https://docs.rakwireless.com/Product-Categories/WisTrio/RAK5010/Quickstart/#prerequisites) at chapter *Product Configuration*) and the JFLASH tool with the configuration file located here: position-switch-connected\proto-rak5010-arduino\output\nrf52840.jflash
 
-We need to configure the IDE to run the scripts automatically.
-
-In **pre-build step**, for any build configuration, enter this command:	sh ../updateVersion.sh
-
-In **post-build step**, for release build configuration, enter this command:	"../../output/GenerateHex.bat" ${ProjName}
