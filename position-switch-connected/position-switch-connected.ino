@@ -31,9 +31,7 @@
 /****************************************************************************************
    Defines
  ****************************************************************************************/
-#ifdef DEBUG
-  #define SERIAL_DEBUG_BAUDRATE   (115200)
-#endif
+#define SERIAL_BAUDRATE   (115200)
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -62,7 +60,7 @@ uint8_t g_u8FlagEmpty = 0;    // trailer empty flag
 void setup()
 {
 #ifdef DEBUG
-  Serial.begin (SERIAL_DEBUG_BAUDRATE);
+  Serial.begin (SERIAL_BAUDRATE);
   while ( !Serial ) delay(10);   // for nrf52840 with native usb
   Serial.printf("%s\n", "********************EXOTIC SYSTEMS 2021************************");
 #endif
@@ -70,12 +68,14 @@ void setup()
   pinMode(LED_GREEN_PIN, OUTPUT);
   pinMode(NRF_IO3, INPUT_PULLUP);
   pinMode(NRF_IO4, INPUT_PULLUP);
+
+  digitalWrite(LED_GREEN_PIN, LOW);
   
   attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
   attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
 
   bg96_init();
-  Serial1.begin(SERIAL_DEBUG_BAUDRATE);
+  Serial1.begin(SERIAL_BAUDRATE);
   while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
   delay(5000);
   bg96_at("ATE1"); //turn off the echo mode  (ATE1  echo on)
@@ -86,6 +86,23 @@ void setup()
   //Serial.print("AT+QGPS");
   bg96_at("AT+QGPS=1, 1, 1, 1, 1");
   delay(1000);
+
+  //Serial.println("Trying to connect base station of operator (AT+CGATT)...");
+  
+  bg96_at("AT+CGATT=1"); //Connect to network
+  delay(3000);
+
+  bg96_at("AT+QCFG=1"); //GSM mode
+  delay(2000);
+ 
+  //Serial.println("send APN...");
+  bg96_at("AT+QICSGP=1,1,\"sl2sfr\",\"\",\"\",1");
+  delay(2000);
+
+  digitalWrite(LED_GREEN_PIN, HIGH);
+  delay(500);
+  digitalWrite(LED_GREEN_PIN, LOW);
+  delay(500);
   
   //nRF5x_lowPower.powerMode(POWER_MODE_OFF);
 }
@@ -109,7 +126,8 @@ void loop()
     if (digitalRead(NRF_IO4) == HIGH)
     {
       digitalWrite(LED_GREEN_PIN, HIGH);   
-      connect();
+      delay(100);
+      connect(1u);
     }
   }
 
@@ -120,8 +138,12 @@ void loop()
     if (digitalRead(NRF_IO3) == HIGH)
     {
       digitalWrite(LED_GREEN_PIN, LOW);   
+      delay(100);
+      connect(0u);
     }
   }
+
+  delay(1000);
 }
 
 /****************************************************************************************
