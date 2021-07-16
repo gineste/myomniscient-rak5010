@@ -21,9 +21,9 @@
  * Defines
  ****************************************************************************************/
 
-//#define DEBUG
+#define DEBUG
 
-#define APN_URL             "sl2sfr"
+#define APN_URL             "nxt17.net" //"sl2sfr"
 #define APN_USERNAME        ""
 #define APN_PASSWORD        ""
 

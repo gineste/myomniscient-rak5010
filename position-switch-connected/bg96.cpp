@@ -19,6 +19,7 @@
  * Include Files
  ****************************************************************************************/
 #include <Arduino.h>
+#include <SoftwareSerial.h>
 
 #include "bg96.h"
 
@@ -30,8 +31,6 @@
 #define bg96_RESET 28
 #define bg96_PWRKEY 2
 #define bg96_GPS_EN 39
-
-#define MAX_CMD_LEN    (256u)
 
 /****************************************************************************************
  * Private type declarations
@@ -45,6 +44,12 @@
  * Variable declarations
  ****************************************************************************************/
  String bg96_rsp = "";
+ char GSM_RSP[1600] = {0};
+
+static uint16_t rxReadIndex  = 0;
+static uint16_t rxWriteIndex = 0;
+static uint16_t rxCount      = 0;
+static uint8_t Gsm_RxBuf[GSM_RXBUF_MAXSIZE];
 
 /****************************************************************************************
  * Public functions
@@ -65,35 +70,140 @@ void bg96_init()
      digitalWrite(bg96_GPS_EN,1);
      delay(2000);
 }
+
+//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
+void bg96_at_wait_rsp(char *at)
+{
+  char tmp[MAX_CMD_LEN] = {0};
+  int ret = -1;
+  int len = strlen(at);
+
+  if ((at != NULL) && (len <= MAX_CMD_LEN))
+  {
+    strncpy(tmp,at,len);
+    tmp[len]='\r';
+    Serial1.write(tmp);    
+    delay(10);
+    memset(GSM_RSP, 0, 1600);
+    ret = Gsm_WaitRspOK(GSM_RSP, GSM_GENER_CMD_TIMEOUT * 8, true);
+    Serial.printf("ret %d ; %s\r\n", ret, GSM_RSP);
+  }else{
+    Serial.printf("AT cmd too long\r\n");
+  }
+}
+
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 void bg96_at(char *at)
 {
   char tmp[256] = {0};
   int len = strlen(at);
-  strncpy(tmp,at,len);
-  tmp[len]='\r';
+  strncpy(tmp, at, len);
+  tmp[len] = '\r';
   Serial1.write(tmp);
   delay(10);
-  while(Serial1.available()){
-      bg96_rsp += char(Serial1.read());
-      delay(2);
+  while (Serial1.available()) {
+    bg96_rsp += char(Serial1.read());
+    delay(2);
   }
   Serial.println(bg96_rsp);
-  bg96_rsp="";
+  bg96_rsp = "";
 }
 
 //gps data
-void gps_show()
+void gps_get_position(sPosition_t * p_psPosition)
 {
- 
+ int ret = -1;
   bg96_rsp="";
-  Serial1.write("AT+QGPSGNMEA=\"GGA\"\r");
-  delay(10);
-  while(Serial1.available()){
-      bg96_rsp += char(Serial1.read());
-      delay(2);
+  //Serial1.write("AT+QGPSGNMEA=\"GGA\"\r");
+  Serial1.write("AT+QGPSLOC=2\r");
+    
+  memset(GSM_RSP, 0, GSM_GENER_CMD_LEN);
+  ret = Gsm_WaitRspOK(GSM_RSP, GSM_GENER_CMD_TIMEOUT * 4, true);
+  Serial.printf("AT+QGPSLOC %d\r\n", ret);
+  Serial.printf("resp = %s\r\n", GSM_RSP);
+
+  int32_t l_s32scanResult = -1;
+  int32_t l_s32Time = 0;
+  int32_t l_s32DecimalTime = 0;
+  int32_t l_s32Date = 0;
+
+  if ((ret == 0) && (p_psPosition != NULL))
+  {
+      /*char gpsloc[256] = {0};
+      bg96_rsp.toCharArray(gpsloc, 256);*/
+      Serial.printf("%s \r\n", strstr(GSM_RSP, "+QGPSLOC:"));
+      l_s32scanResult  = sscanf(strstr(GSM_RSP, "+QGPSLOC:"), "+QGPSLOC: %d.%d,%f,%f,%f,%f,%c,%f,%f,%f,%d,%hu",
+                          (int*)&(l_s32Time),
+                          (int*)&(l_s32DecimalTime),
+                          &(p_psPosition->f32Latitude),
+                          &(p_psPosition->f32Longitude),
+                          &(p_psPosition->f32Hdop),
+                          &(p_psPosition->f32Altitude),
+                          &(p_psPosition->u8FixType),
+                          &(p_psPosition->f32CourseOverGround),
+                          &(p_psPosition->f32Speedkph),
+                          &(p_psPosition->f32Speedknots),
+                          (int*)&(l_s32Date),
+                          &(p_psPosition->u16Satellites));
+
+      Serial.printf("SCAN: %d.%d,%f,%f,%f,%f,%c,%f,%f,%f,%d,%hu",
+                          (l_s32Time),
+                          (l_s32DecimalTime),
+                          (p_psPosition->f32Latitude),
+                          (p_psPosition->f32Longitude),
+                          (p_psPosition->f32Hdop),
+                          (p_psPosition->f32Altitude),
+                          (p_psPosition->u8FixType),
+                          (p_psPosition->f32CourseOverGround),
+                          (p_psPosition->f32Speedkph),
+                          (p_psPosition->f32Speedknots),
+                          (l_s32Date),
+                          (p_psPosition->u16Satellites));
+
+      if(l_s32scanResult >= 11)
+      {
+        if(p_psPosition->u8FixType > 0x30)
+        {
+          p_psPosition->u8FixType -= 0x30;
+        }
+        /* split time from hhmmss to hh mm ss */
+        p_psPosition->u8Seconds = l_s32Time % 100;
+        l_s32Time -= p_psPosition->u8Seconds;
+        l_s32Time /= 100;
+
+        p_psPosition->u8Minutes = l_s32Time % 100;
+        l_s32Time -= p_psPosition->u8Minutes;
+        l_s32Time /= 100;
+
+        p_psPosition->u8Hours = l_s32Time % 100;
+
+        /* split date from ddmmyy to dd mm yy */
+        p_psPosition->u8Year = l_s32Date % 100;
+        l_s32Date -= p_psPosition->u8Year;
+        l_s32Date /= 100;
+
+        p_psPosition->u8Month = l_s32Date % 100;
+        l_s32Date -= p_psPosition->u8Month;
+        l_s32Date /= 100;
+
+        p_psPosition->u8Day = l_s32Date % 100;
+
+        Serial.println("Parse GPS OK");
+        Serial.printf("lat = %f, long = %f, alt = %f\r\n", p_psPosition->f32Latitude, p_psPosition->f32Longitude, p_psPosition->f32Hdop, p_psPosition->f32Altitude);
+
+        /* Fix with position */
+        //l_eCode = GNSS_C_SUCCESS;
+      }else{
+        /* Parsing error, consider no position (?) */
+        //l_eCode = GNSS_ERROR_NO_POSITION;
+        Serial.printf("Parse GPS FAIL ; scan = %d\r\n", l_s32scanResult);
+      }
   }
-  Serial.println(bg96_rsp);
+  else
+  {
+    Serial.println("GPS FAILED");
+  }
+    
   bg96_rsp="";
 }
 
@@ -105,8 +215,8 @@ void connect(uint8_t p_u8Flag) {
   //delay(2000);
 
   //Serial.println("QIACT...");
-  bg96_at("AT+QIACT=1");
-  delay(2000);
+  bg96_at_wait_rsp("AT+QIACT=1");
+  //delay(2000);
 
   //bg96_at("AT+QIACT=?");
   //delay(2000);
@@ -115,11 +225,11 @@ void connect(uint8_t p_u8Flag) {
   //bg96_at("AT+QLTS=1"); //query GMT time from network
   //delay(2000);
 
-  bg96_at("AT+QHTTPCFG=\"contextid\",1");
-  delay(2000);
+  bg96_at_wait_rsp("AT+QHTTPCFG=\"contextid\",1");
+  //delay(2000);
 
-  bg96_at("AT+QHTTPCFG=\"responseheader\",1");
-  delay(2000);
+  bg96_at_wait_rsp("AT+QHTTPCFG=\"responseheader\",1");
+  //delay(2000);
 
   //GET request
   //bg96_at("AT+QHTTPURL=17,80");
@@ -148,7 +258,7 @@ void connect(uint8_t p_u8Flag) {
     // full
     Serial1.write("{TOR_state: {TOR1_current_state: 0,TOR2_current_state: 1}}\r"); 
   }
-  delay(3000);
+  //delay(3000);
   
   //bg96_at("AT+QHTTPREAD=80");
   //delay(3000);
@@ -200,6 +310,100 @@ eBG96ErrorCode_t eBG96_ActiveContext(void)
 {
   bg96_at("AT+QIACT=1");
   return BG96_SUCCESS;
+}
+
+int Gsm_RxByte(void)
+{
+    int c = -1;
+
+    //__disable_irq();
+    //if (rxCount > 0)
+    {
+        //c = Gsm_RxBuf[rxReadIndex];
+        if(Serial1.available() > 0)
+        {
+          c = char(Serial1.read());
+        }
+        
+        rxReadIndex++;
+        if (rxReadIndex == GSM_RXBUF_MAXSIZE)
+        {
+            rxReadIndex = 0;
+        }
+        //rxCount--;
+    }
+    //__enable_irq();
+
+    return c;
+}
+
+int Gsm_WaitRspOK(char *rsp_value, uint16_t timeout_ms, uint8_t is_rf)
+{
+    int ret = -1, wait_len = 0;
+    char len[10] = {0};
+    uint16_t time_count = timeout_ms;
+    uint32_t i = 0;
+    int       c;
+    char *cmp_p = NULL;
+
+    wait_len = is_rf ? strlen(GSM_CMD_RSP_OK_RF) : strlen(GSM_CMD_RSP_OK);
+
+    /*if(g_type == GSM_TYPE_FILE)
+    {
+        do
+        {
+            c = Gsm_RxByte();
+            if(c < 0)
+            {
+                time_count--;
+                delay_ms(1);
+                continue;
+            }
+
+            rsp_value[i++] = (char)c;
+            //NRF_LOG_INFO("%02X", rsp_value[i - 1]);
+            time_count--;
+        }
+        while(time_count > 0);
+    }
+    else*/
+    {
+        memset(GSM_RSP, 0, 1600);
+        do
+        {
+            int c;
+            c = Gsm_RxByte();
+            if(c < 0)
+            {
+                time_count--;
+                delay(1);
+                continue;
+            }
+
+            GSM_RSP[i++] = (char)c;
+
+            if(i >= 0 && rsp_value != NULL)
+            {
+                if(is_rf)
+                    cmp_p = strstr(GSM_RSP, GSM_CMD_RSP_OK_RF);
+                else
+                    cmp_p = strstr(GSM_RSP, GSM_CMD_RSP_OK);
+                if(cmp_p)
+                {
+                    if(i > wait_len && rsp_value != NULL)
+                    {
+                        //SEGGER_RTT_printf(0,"--%s  len=%d\r\n", rsp_value, i);
+                        memcpy(rsp_value, GSM_RSP, i);
+                    }
+                    ret = 0;
+                    break;
+                }
+            }
+        }
+        while(time_count > 0);
+    }
+
+    return ret;
 }
 
 /****************************************************************************************

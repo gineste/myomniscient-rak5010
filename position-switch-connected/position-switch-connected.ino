@@ -11,7 +11,7 @@
 
    Date:          12/07/2021
    Author:        Martin C.
-   Description:   Main ino file
+   Description:   Main ino file-
 
 */
 
@@ -78,27 +78,17 @@ void setup()
   Serial1.begin(SERIAL_BAUDRATE);
   while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
   delay(5000);
-  bg96_at("ATE1"); //turn off the echo mode  (ATE1  echo on)
-  delay(1000);
-  //Serial.print("AT+QGPSCFG");
-  bg96_at("AT+QGPSCFG=\"gpsnmeatype\",1");
-  delay(1000);
-  //Serial.print("AT+QGPS");
-  bg96_at("AT+QGPS=1, 1, 1, 1, 1");
-  delay(1000);
-
-  //Serial.println("Trying to connect base station of operator (AT+CGATT)...");
+  bg96_at_wait_rsp("ATE1");       //turn off the echo mode  (ATE1  echo on)
+  bg96_at_wait_rsp("AT+QGPSCFG=\"gpsnmeatype\",1");
+  bg96_at_wait_rsp("AT+QGPS=1, 1, 1, 1, 1");  
   
-  bg96_at("AT+CGATT=1"); //Connect to network
+  bg96_at("AT+CGATT=1");          //Connect to network
   delay(3000);
-
   bg96_at("AT+QCFG=1"); //GSM mode
   delay(2000);
  
-  //Serial.println("send APN...");
-  bg96_at("AT+QICSGP=1,1,\"sl2sfr\",\"\",\"\",1");
-  delay(2000);
-
+  bg96_at_wait_rsp("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1");
+  
   digitalWrite(LED_GREEN_PIN, HIGH);
   delay(500);
   digitalWrite(LED_GREEN_PIN, LOW);
@@ -142,6 +132,15 @@ void loop()
       connect(0u);
     }
   }
+
+  /*
+  bg96_at("ATI");  //display product information
+  delay(2000);
+  bg96_at("AT+QNWINFO"); 
+  delay(2000);*/
+ 
+  sPosition_t l_sPosition = {0};
+  gps_get_position(&l_sPosition);
 
   delay(1000);
 }
