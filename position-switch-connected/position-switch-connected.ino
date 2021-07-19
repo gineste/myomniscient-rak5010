@@ -72,27 +72,55 @@ void setup()
   
   attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
   attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
+  
+ // nRF5x_lowPower.enableWakeupByInterrupt(NRF_IO3, FALLING);
+ // nRF5x_lowPower.enableWakeupByInterrupt(NRF_IO4, FALLING);
 
   bg96_init();
   Serial1.begin(SERIAL_BAUDRATE);
   while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
-  delay(5000);
-  bg96_at_wait_rsp("ATE1");       //turn off the echo mode  (ATE1  echo on)
-  bg96_at_wait_rsp("AT+QGPSCFG=\"gpsnmeatype\",1");
-  bg96_at_wait_rsp("AT+QGPS=1, 1, 1, 1, 1");  
-  
-  bg96_at("AT+CGATT=1");          //Connect to network
-  delay(3000);
-  bg96_at("AT+QCFG=1"); //GSM mode
-  delay(2000);
- 
-  bg96_at_wait_rsp("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1");
-  
+
   digitalWrite(LED_GREEN_PIN, HIGH);
-  delay(500);
+  delay(250);
   digitalWrite(LED_GREEN_PIN, LOW);
-  delay(500);
+  delay(250);
+  digitalWrite(LED_GREEN_PIN, HIGH);
+  delay(250);
+  digitalWrite(LED_GREEN_PIN, LOW);
+  delay(250);
+
+  delay(4000);
   
+  eBG96_TurnOn();
+  bg96_at_wait_rsp("ATE1", GSM_CMD_RSP_OK_RF);       //turn off the echo mode  (ATE1  echo on)
+  bg96_at_wait_rsp("AT+QGPSCFG=\"gpsnmeatype\",1", GSM_CMD_RSP_OK_RF);
+  bg96_at_wait_rsp("AT+QGPS=1, 1, 1, 1, 1", GSM_CMD_RSP_OK_RF);  
+  //eBG96_TurnOff();
+  
+  //bg96_at("AT+CGATT=1");          //Connect to network
+  //delay(3000);
+  //bg96_at_wait_rsp("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF);
+  
+  //eBG96_TurnOn();
+  //vBG96_GNSS_TurnOn();
+  
+  //eSensorMngr_UpdatePosition(TIME_TO_FIX_MAX);
+  //vBG96_GNSS_TurnOff();
+  connect(0u);
+  eBG96_TurnOff();
+  vBG96_GNSS_TurnOff();
+
+  digitalWrite(LED_GREEN_PIN, HIGH);
+  delay(250);
+  digitalWrite(LED_GREEN_PIN, LOW);
+  delay(250);
+  digitalWrite(LED_GREEN_PIN, HIGH);
+  delay(250);
+  digitalWrite(LED_GREEN_PIN, LOW);
+  delay(250);
+
+  Serial.printf("Go to sleep...\r\n");
+  delay(500);
   //nRF5x_lowPower.powerMode(POWER_MODE_OFF);
 }
 
@@ -132,15 +160,7 @@ void loop()
     }
   }
 
-  /*
-  bg96_at("ATI");  //display product information
-  delay(2000);
-  bg96_at("AT+QNWINFO"); 
-  delay(2000);*/
- 
-  eSensorMngr_UpdatePosition(TIME_TO_FIX_MAX);
-
-  delay(1000);
+  delay(4000);
 }
 
 /****************************************************************************************

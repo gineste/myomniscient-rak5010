@@ -21,17 +21,34 @@
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 
-#include "bg96.h"
+#include "timeout.h"
 #include "sensors.h"
+#include "config.h"
+
+#include "bg96.h"
 
 /****************************************************************************************
    Defines
  ****************************************************************************************/
 //Pin define
-#define bg96_W_DISABLE 29
-#define bg96_RESET 28
-#define bg96_PWRKEY 2
-#define bg96_GPS_EN 39
+#define bg96_W_DISABLE  29
+#define bg96_RESET      28
+#define bg96_PWRKEY     2
+#define bg96_GPS_EN     39
+#define bg96_STATUS     31
+
+#define RDY_TIMEOUT       (10000u) /* ms */
+#define CMD_TIMEOUT      (3000u) /* ms */
+#define PWDN_TIMEOUT       (65000u) /* ms */
+#define APN_TIMEOUT      (150000u) /* ms */
+#define DEACT_TIMEOUT   (40000u) /* ms */
+
+#define ON_TIMEOUT_MS    (5500u) /* ms */      // Doc BG96: wait at least 4.8s for waiting status pin outputting level
+#define OFF_TIMEOUT_MS    (3000u) /* ms */
+#define OFF_TIME        (1000u)
+
+#define PWRKEY_PULSE_ON_MS  (600u) /* ms */
+#define PWRKEY_PULSE_OFF_MS (700u) /* ms */
 
 /****************************************************************************************
    Private type declarations
@@ -40,6 +57,9 @@
 /****************************************************************************************
    Private function declarations
  ****************************************************************************************/
+ static eBG96Status_t eBG96_ReadStatusPin(void);
+ static eBG96Status_t eBG96_WaitStatus(uint8_t p_u8ExpectedState, uint32_t p_u32Timeout);
+ static eBG96Status_t eBG96_PulsePwrKey(uint32_t p_u32Duration);
 
 /****************************************************************************************
    Variable declarations
@@ -55,6 +75,119 @@ static uint8_t Gsm_RxBuf[GSM_RXBUF_MAXSIZE];
 /****************************************************************************************
    Public functions
  ****************************************************************************************/
+ /**@brief      Turn on BG96.
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_TIMEOUT
+ * @retval BG96_ERROR_FAILED
+ */
+eBG96ErrorCode_t eBG96_TurnOn(void)
+{
+ eBG96ErrorCode_t l_eisReady = BG96_ERROR_FAILED;
+  eBG96Status_t l_eBG96_Status = BG96_STATUS_INACTIVE;
+  uint32_t l_u32TsIn = u32Time_getMs();
+
+#ifdef DEBUG
+  Serial.printf("[%u] GETSTATUS (%u ms)\r\n", (unsigned int)u32Time_getMs(), (unsigned int)(u32Time_getMs() - l_u32TsIn));
+#endif
+    
+  /* Get current status */
+  l_eBG96_Status = eBG96_ReadStatusPin();
+
+  /* Check if modem is OFF */
+  if(l_eBG96_Status == BG96_STATUS_INACTIVE)
+  {    
+    /* Switch on Vcc */
+    //vBG96_EnablePwr();
+
+    /* Make a pulse PWRKEY at 500ms to start the BG96 */
+    eBG96_PulsePwrKey(PWRKEY_PULSE_ON_MS);
+
+    /* Wait for STATUS comes High(active) */
+    l_eBG96_Status = eBG96_WaitStatus(BG96_STATUS_ACTIVE, ON_TIMEOUT_MS);
+    if(BG96_STATUS_ACTIVE == l_eBG96_Status)
+    {
+      /* Reinit AT layer (restart rx on uart) */
+      //vAT_Init();
+
+      /* Wait for UART and internal BG96 state machine */
+      //l_eisReady = eBG96_WaitResponse(RDY_STRING, RDY_TIMEOUT);
+      memset(GSM_RSP, 0, 1600);
+      l_eisReady = eBG96_WaitResponse(GSM_RSP, RDY_TIMEOUT, GSM_READY_RF);
+
+      //g_ePowerState = BG96_PWR_BGON;
+    }else{
+      /* Not in good state */
+      l_eisReady = BG96_ERROR_FAILED;
+    #ifdef DEBUG
+      Serial.printf("BG96 turn on PWR key failed\r\n");
+    #endif
+    }
+  }else{
+    /* Reinit AT layer (restart rx on uart) */
+    //vAT_Init();
+
+    /* Already started */
+    l_eisReady = BG96_SUCCESS;
+  }
+
+#ifdef DEBUG
+  Serial.printf("[%u] STATUS=%d, READY=%d (%u ms)\r\n",
+           (unsigned int)u32Time_getMs(),
+           l_eBG96_Status,
+           l_eisReady,
+           (unsigned int)(u32Time_getMs() - l_u32TsIn));
+#endif
+
+  return l_eisReady;
+}
+
+/**@brief      Turn off BG96.
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ */
+eBG96ErrorCode_t eBG96_TurnOff(void)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_FAILED;
+  uint32_t l_u32TsIn = u32Time_getMs();
+
+  eBG96Status_t l_eBG96_Status = eBG96_ReadStatusPin(); /* Get current status */
+
+  #ifdef DEBUG
+  Serial.printf("[%u] GETSTATUS (%u ms)\r\n", (unsigned int)u32Time_getMs(), (unsigned int)(u32Time_getMs() - l_u32TsIn));
+  #endif
+    
+  if (l_eBG96_Status == BG96_STATUS_ACTIVE)
+  {
+    l_u32TsIn = u32Time_getMs();
+
+    /* Make a pulse PWRKEY to turn off the BG96 */
+    eBG96_PulsePwrKey(PWRKEY_PULSE_OFF_MS);
+
+    /* Wait for STATUS comes Low(inactive) */
+    if(BG96_STATUS_INACTIVE == eBG96_WaitStatus(BG96_STATUS_INACTIVE, OFF_TIMEOUT_MS))
+    {
+      l_eCode = BG96_SUCCESS;
+      //g_ePowerState = BG96_PWR_BGOFF;
+    }else{
+      l_eCode = BG96_ERROR_FAILED;
+    #ifdef DEBUG
+      Serial.printf("BG96 turn off PWR key failed\r\n");
+    #endif
+
+      /* Switch off Vcc for 1s */
+      //vBG96_DisablePwr();
+    }
+  #ifdef DEBUG
+    Serial.printf("[%u] OFF (%u ms)\r\n", (unsigned int)u32Time_getMs(), (unsigned int)(u32Time_getMs() - l_u32TsIn));
+  #endif
+  }else{
+    /* Already off */
+    l_eCode = BG96_SUCCESS;
+  }
+
+  return l_eCode;
+}
+
 //bg96 power up
 void bg96_init()
 {
@@ -62,21 +195,19 @@ void bg96_init()
   pinMode(bg96_PWRKEY, OUTPUT);
   pinMode(bg96_GPS_EN, OUTPUT);
   pinMode(bg96_W_DISABLE, OUTPUT);
+  pinMode(bg96_STATUS, INPUT);
 
   digitalWrite(bg96_RESET, 0);
-  digitalWrite(bg96_PWRKEY, 1);
   digitalWrite(bg96_W_DISABLE, 1);
-  delay(2000);
-  digitalWrite(bg96_PWRKEY, 0);
   digitalWrite(bg96_GPS_EN, 1);
-  delay(2000);
+  //digitalWrite(bg96_GPS_EN, 0);
 }
 
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
-void bg96_at_wait_rsp(char *at)
+void bg96_at_wait_rsp(char *at, const char * p_pchExpectedRsp)
 {
   char tmp[MAX_CMD_LEN] = {0};
-  int ret = -1;
+  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
   int len = strlen(at);
 
   if ((at != NULL) && (len <= MAX_CMD_LEN))
@@ -86,10 +217,14 @@ void bg96_at_wait_rsp(char *at)
     Serial1.write(tmp);
     delay(10);
     memset(GSM_RSP, 0, 1600);
-    ret = Gsm_WaitRspOK(GSM_RSP, GSM_GENER_CMD_TIMEOUT * 8, true);
-    Serial.printf("ret %d ; %s\r\n", ret, GSM_RSP);
+    l_eCode = eBG96_WaitResponse(GSM_RSP, CMD_TIMEOUT, p_pchExpectedRsp);
+    #ifdef DEBUG
+      Serial.printf("%s\r\n", GSM_RSP);
+    #endif
   } else {
+  #ifdef DEBUG
     Serial.printf("AT cmd too long\r\n");
+  #endif
   }
 }
 
@@ -113,7 +248,7 @@ void bg96_at(char *at)
 //gps data
 eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
 {
-  int ret = -1;
+  eBG96ErrorCode_t l_eBG96Code = BG96_SUCCESS;
   eGnssCodes_t l_eCode = GNSS_C_SUCCESS;
   int32_t l_s32scanResult = -1;
   int32_t l_s32Time = 0;
@@ -124,12 +259,9 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
   /* send GPS command to BG96 */
   memset(GSM_RSP, 0, GSM_GENER_CMD_LEN);
   Serial1.write("AT+QGPSLOC=2\r");
-  ret = Gsm_WaitRspOK(GSM_RSP, GSM_GENER_CMD_TIMEOUT * 4, true);
-#ifdef DEBUG
-  Serial.printf("AT+QGPSLOC %d\r\n", ret);
-#endif
+  l_eBG96Code = eBG96_WaitResponse(GSM_RSP, GSM_GENER_CMD_TIMEOUT * 4, GSM_CMD_RSP_OK_RF);
 
-  if ((ret == 0) && (p_psPosition != NULL))
+  if ((l_eBG96Code == GNSS_C_SUCCESS) && (p_psPosition != NULL))
   {
       /* init buffers */
       memset(l_sLatitude, 0, 15);
@@ -234,13 +366,19 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
 
 //network connect
 void connect(uint8_t p_u8Flag) {
-
+    
+  bg96_at("AT+CGATT=1");          //Connect to network
+  delay(3000);
+  bg96_at("AT+QCFG=1"); //GSM mode
+  delay(2000);
+  bg96_at_wait_rsp("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF);
+  
   //Serial.println("get network info...");
   //bg96_at("AT+QNWINFO");
   //delay(2000);
 
   //Serial.println("QIACT...");
-  bg96_at_wait_rsp("AT+QIACT=1");
+  bg96_at_wait_rsp("AT+QIACT=1", GSM_CMD_RSP_OK_RF);
   //delay(2000);
 
   //bg96_at("AT+QIACT=?");
@@ -250,10 +388,10 @@ void connect(uint8_t p_u8Flag) {
   //bg96_at("AT+QLTS=1"); //query GMT time from network
   //delay(2000);
 
-  bg96_at_wait_rsp("AT+QHTTPCFG=\"contextid\",1");
+  bg96_at_wait_rsp("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF);
   //delay(2000);
 
-  bg96_at_wait_rsp("AT+QHTTPCFG=\"responseheader\",1");
+  bg96_at_wait_rsp("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF);
   //delay(2000);
 
   //GET request
@@ -267,7 +405,8 @@ void connect(uint8_t p_u8Flag) {
   //POST request
   bg96_at("AT+QHTTPURL=57,80"); //57 is length of the url
   delay(3000);
-  Serial1.write("https://webhook.site/b80027c3-ec69-4694-b32d-b640549c6213\r");
+  //Serial1.write("https://webhook.site/b80027c3-ec69-4694-b32d-b640549c6213\r");
+  Serial1.write("https://webhook.site/fba44e81-f85f-43bd-b906-b68b57f05f42\r");
   delay(3000);
   bg96_at("AT+QHTTPPOST=58,80,80");//48 is length of the post data
   delay(3000);
@@ -283,7 +422,7 @@ void connect(uint8_t p_u8Flag) {
     // full
     Serial1.write("{TOR_state: {TOR1_current_state: 0,TOR2_current_state: 1}}\r");
   }
-  //delay(3000);
+  delay(3000);
 
   //bg96_at("AT+QHTTPREAD=80");
   //delay(3000);
@@ -362,78 +501,114 @@ int Gsm_RxByte(void)
   return c;
 }
 
-int Gsm_WaitRspOK(char *rsp_value, uint16_t timeout_ms, uint8_t is_rf)
+eBG96ErrorCode_t eBG96_WaitResponse(char *rsp_value, uint16_t timeout_ms, const char * p_pchExpectedRsp)
 {
-  int ret = -1, wait_len = 0;
+  eBG96ErrorCode_t l_eErrCode = BG96_ERROR_PARAM;  
+  int wait_len = 0;
   char len[10] = {0};
   uint16_t time_count = timeout_ms;
   uint32_t i = 0;
   int       c;
   char *cmp_p = NULL;
 
-  wait_len = is_rf ? strlen(GSM_CMD_RSP_OK_RF) : strlen(GSM_CMD_RSP_OK);
-
-  /*if(g_type == GSM_TYPE_FILE)
-    {
-      do
-      {
-          c = Gsm_RxByte();
-          if(c < 0)
-          {
-              time_count--;
-              delay_ms(1);
-              continue;
-          }
-
-          rsp_value[i++] = (char)c;
-          //NRF_LOG_INFO("%02X", rsp_value[i - 1]);
-          time_count--;
-      }
-      while(time_count > 0);
-    }
-    else*/
+  wait_len = strlen(p_pchExpectedRsp);
+ 
+  memset(GSM_RSP, 0, 1600);
+  do
   {
-    memset(GSM_RSP, 0, 1600);
-    do
+    int c;
+    c = Gsm_RxByte();
+    if (c < 0)
     {
-      int c;
-      c = Gsm_RxByte();
-      if (c < 0)
-      {
-        time_count--;
-        delay(1);
-        continue;
-      }
-
-      GSM_RSP[i++] = (char)c;
-
-      if (i >= 0 && rsp_value != NULL)
-      {
-        if (is_rf)
-          cmp_p = strstr(GSM_RSP, GSM_CMD_RSP_OK_RF);
-        else
-          cmp_p = strstr(GSM_RSP, GSM_CMD_RSP_OK);
-        if (cmp_p)
-        {
-          if (i > wait_len && rsp_value != NULL)
-          {
-            //SEGGER_RTT_printf(0,"--%s  len=%d\r\n", rsp_value, i);
-            memcpy(rsp_value, GSM_RSP, i);
-          }
-          ret = 0;
-          break;
-        }
-      }
+      time_count--;
+      delay(1);
+      continue;
     }
-    while (time_count > 0);
-  }
 
-  return ret;
+    GSM_RSP[i++] = (char)c;
+
+    if (i >= 0 && rsp_value != NULL)
+    {
+      cmp_p = strstr(GSM_RSP, p_pchExpectedRsp);
+      if (cmp_p)
+      {
+        if (i > wait_len && rsp_value != NULL)
+        {
+          memcpy(rsp_value, GSM_RSP, i);
+        }
+        l_eErrCode = BG96_SUCCESS;
+        break;
+      }else{
+        l_eErrCode = BG96_ERROR_FAILED;
+      }
+    }else{
+        l_eErrCode = BG96_ERROR_PARAM;
+    }
+  }
+  while (time_count > 0);
+
+  return l_eErrCode;
+}
+
+/**@brief Turn on GNSS module on BG96
+ * @param None
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+void vBG96_GNSS_TurnOn(void)
+{
+  digitalWrite(bg96_GPS_EN, HIGH);
+  vTime_WaitMs(10);
+
+  //bg96_at_wait_rsp("AT+QGPS=1", GSM_CMD_RSP_OK_RF);
+  //bg96_at("AT+QGPS=1");
+}
+
+/**@brief Turn on GNSS module on BG96
+ * @param None
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+void vBG96_GNSS_TurnOff(void)
+{
+  digitalWrite(bg96_GPS_EN, LOW);
+  //bg96_at_wait_rsp("AT+QGPSEND", GSM_CMD_RSP_OK_RF);
+  //bg96_at("AT+QGPSEND");
 }
 
 /****************************************************************************************
    Private functions
  ****************************************************************************************/
+ static eBG96Status_t eBG96_ReadStatusPin(void)
+{
+ return (HIGH == digitalRead(bg96_STATUS)) ? BG96_STATUS_ACTIVE : BG96_STATUS_INACTIVE;
+}
+
+static eBG96Status_t eBG96_WaitStatus(uint8_t p_u8ExpectedState, uint32_t p_u32Timeout)
+{
+  uint32_t l_u32Alarm = u32Time_getMs() + p_u32Timeout;
+  eBG96Status_t l_eBG96_Status = BG96_STATUS_INACTIVE;
+
+  /* Read status pin until status pin high or timeout */
+  do
+  {
+    l_eBG96_Status = eBG96_ReadStatusPin();
+  }
+  while ( (l_eBG96_Status != p_u8ExpectedState) && (l_u32Alarm >= u32Time_getMs()) );
+
+  return l_eBG96_Status;
+}
+
+static eBG96Status_t eBG96_PulsePwrKey(uint32_t p_u32Duration)
+{
+  digitalWrite(bg96_PWRKEY, HIGH);
+  vTime_WaitMs(p_u32Duration);
+  digitalWrite(bg96_PWRKEY, LOW);
+
+  return eBG96_ReadStatusPin();
+}
 
 /****************************************************************************************
    End Of File

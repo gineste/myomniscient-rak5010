@@ -31,7 +31,7 @@
 
 #define  GSM_OPENSOCKET_OK_STR          "CONNECT OK\r\n"
 #define  GSM_OPENSOCKET_FAIL_STR        "CONNECT FAIL\r\n"
-#define  FIX_BAUD_URC                    "RDY\r\n"
+#define  GSM_READY_RF                    "RDY\r\n"
 #define  GSM_CMD_CRLF                   "\r\n"
 #define  GSM_CMD_RSP_OK_RF              "OK\r\n"
 #define  GSM_CMD_RSP_OK                 "OK"
@@ -59,16 +59,26 @@ typedef enum _GNSS_CODES_ {
   GNSS_ERROR_TIMEOUT
 } eGnssCodes_t;
 
+typedef enum _BG96_STATUS_ {
+  BG96_STATUS_INACTIVE   = 0u,
+  BG96_STATUS_ACTIVE    = 1u,
+} eBG96Status_t;
+
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
+ eBG96ErrorCode_t eBG96_TurnOn(void);
+eBG96ErrorCode_t eBG96_TurnOff(void);
+
 void bg96_init();         //bg96 power up
-void bg96_at_wait_rsp(char *at);
+void bg96_at_wait_rsp(char *at, const char * p_pchExpectedRsp);
 void bg96_at(char *at);   //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition) ;
 void connect(uint8_t p_u8Flag);
 eBG96ErrorCode_t  eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword);
 eBG96ErrorCode_t  eBG96_ActiveContext(void);
-int Gsm_WaitRspOK(char *rsp_value, uint16_t timeout_ms, uint8_t is_rf);
+eBG96ErrorCode_t  eBG96_WaitResponse(char *rsp_value, uint16_t timeout_ms, const char * p_pchExpectedRsp);
+void vBG96_GNSS_TurnOn(void);
+void vBG96_GNSS_TurnOff(void);
 
 #endif /* BG96_H_ */
