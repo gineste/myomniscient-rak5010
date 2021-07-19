@@ -140,7 +140,7 @@ void loop()
   delay(2000);*/
  
   sPosition_t l_sPosition = {0};
-  gps_get_position(&l_sPosition);
+  eGNSS_GetPosition(&l_sPosition);
 
   delay(1000);
 }

@@ -40,7 +40,7 @@
  * Type definitions
  ****************************************************************************************/
  typedef enum _BG96_ERR_CODE_{
- BG96_SUCCESS,
+  BG96_SUCCESS,
   BG96_ERROR_PARAM,
   BG96_ERROR_FAILED,
   BG96_ERROR_TRANSMIT,
@@ -49,6 +49,14 @@
 
   BG96_ERROR_MAXID
 } eBG96ErrorCode_t;
+
+typedef enum _GNSS_CODES_ {
+   GNSS_C_SUCCESS,
+  GNSS_ERROR_PARAM,
+  GNSS_ERROR_FAILED,
+  GNSS_ERROR_NO_POSITION,
+  GNSS_ERROR_TIMEOUT
+} eGnssCodes_t;
 
 typedef struct _GNSS_POSITION_ {
    uint8_t u8Hours;
@@ -79,7 +87,7 @@ typedef struct _GNSS_POSITION_ {
 void bg96_init();         //bg96 power up
 void bg96_at_wait_rsp(char *at);
 void bg96_at(char *at);   //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
-void gps_get_position(sPosition_t * p_psPosition) ;
+eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition) ;
 void connect(uint8_t p_u8Flag);
 eBG96ErrorCode_t  eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword);
 eBG96ErrorCode_t  eBG96_ActiveContext(void);
