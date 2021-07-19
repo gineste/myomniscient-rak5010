@@ -22,6 +22,7 @@
 #include <SoftwareSerial.h>
 
 #include "bg96.h"
+#include "sensors.h"
 
 /****************************************************************************************
    Defines
@@ -212,7 +213,7 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
       /* Fix with position */
       l_eCode = GNSS_C_SUCCESS;
     } else {
-      /* Parsing error, consider no position (?) */
+      /* Parsing error, consider no position */
       l_eCode = GNSS_ERROR_NO_POSITION;
     #ifdef DEBUG
       Serial.printf("Parse GPS FAIL ; scan = %d\r\n", l_s32scanResult);
@@ -221,6 +222,8 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
   }
   else
   {
+    /* no position */
+    l_eCode = GNSS_ERROR_NO_POSITION;
   #ifdef DEBUG
     Serial.println("GPS FAILED");
   #endif

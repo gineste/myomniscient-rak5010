@@ -26,7 +26,6 @@
 #include "sensors.h"
 #include "bg96.h"
 #include "config.h"
-#include "AT.h"
 
 /****************************************************************************************
    Defines
@@ -139,8 +138,7 @@ void loop()
   bg96_at("AT+QNWINFO"); 
   delay(2000);*/
  
-  sPosition_t l_sPosition = {0};
-  eGNSS_GetPosition(&l_sPosition);
+  eSensorMngr_UpdatePosition(TIME_TO_FIX_MAX);
 
   delay(1000);
 }

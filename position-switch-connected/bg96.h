@@ -16,6 +16,7 @@
 /****************************************************************************************
  * Include Files
  ****************************************************************************************/
+#include "sensors.h"
 
 /****************************************************************************************
  * Defines
@@ -58,29 +59,6 @@ typedef enum _GNSS_CODES_ {
   GNSS_ERROR_TIMEOUT
 } eGnssCodes_t;
 
-typedef struct _GNSS_POSITION_ {
-   uint8_t u8Hours;
-   uint8_t u8Minutes;
-   uint8_t u8Seconds;
-   uint8_t u8Day;
-   uint8_t u8Month;
-   uint8_t u8Year;
-
-   float f32Latitude;
-   float f32Longitude;
-   float f32Altitude;
-
-   float f32CourseOverGround;
-   float f32Speedkph;
-   float f32Speedknots;
-
-   float f32Hdop;
-   uint16_t u16Satellites;
-   uint8_t u8FixType;
-
-   uint8_t u8TimeToFix;
-
-} sPosition_t;
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/

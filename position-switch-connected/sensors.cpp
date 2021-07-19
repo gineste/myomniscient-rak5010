@@ -22,6 +22,10 @@
 #include <Wire.h>
 #include <Arduino.h>
 
+#include "bg96.h"
+#include "timeout.h"
+#include "config.h"
+
 #include "sensors.h"
 
 /****************************************************************************************
@@ -44,10 +48,90 @@
  * Variable declarations
  ****************************************************************************************/
 TwoWire *wi = &Wire;
+static s_SensorMngrData_t g_sSensorsData = { 0 };
 
 /****************************************************************************************
  * Public functions
  ****************************************************************************************/ 
+ 
+ /**@brief   Function to get all sensors data.
+ * @return  pointer on sensors data structure.
+ */
+s_SensorMngrData_t *psSensorMngr_GetSensorData(void)
+{
+ return &g_sSensorsData;
+}
+
+/**@brief   Function to perform a gps position.
+ * @param p_u32TimeoutInSeconds Desired timeout for position acquisition
+ * @return  Error code.
+ */
+e_SensorMngr_ErrorCode_t eSensorMngr_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
+{
+  e_SensorMngr_ErrorCode_t l_eSensorMngrErrorCode = SENSOR_MNGR_SUCCESS;
+  eGnssCodes_t l_eGNSSCode = GNSS_ERROR_FAILED;
+  uint32_t l_u32TimeStart = u32Time_getMs();
+  uint32_t l_u32TimeOut = 0u;
+  sPosition_t l_sPosition = {0};
+
+  if(p_u32TimeoutInSeconds > TIME_TO_FIX_MAX)
+  {
+    l_u32TimeOut = u32Time_getMs() + SECOND_TO_MS(TIME_TO_FIX_MAX);
+  }else{
+    l_u32TimeOut = u32Time_getMs() + SECOND_TO_MS(p_u32TimeoutInSeconds);
+  }
+
+  /* Save current Time at start */
+  l_u32TimeStart = u32Time_getMs();
+
+  /* Wait for a valid GPS position */
+  while((l_eGNSSCode != GNSS_ERROR_TIMEOUT) &&
+      ((l_sPosition.f32Hdop <= 0.0f) || (l_sPosition.f32Hdop > 4.0f)) &&
+      (u32Time_getMs() < l_u32TimeOut))
+  {
+    /* Request for a position */
+    l_eGNSSCode = eGNSS_GetPosition(&l_sPosition);
+   #ifdef DEBUG
+    Serial.printf("[%u] Wait Position [%u s]? %s\r\n",
+             (unsigned int)u32Time_getMs(),
+             (unsigned int) MS_TO_SECOND(l_u32TimeOut - (unsigned int)u32Time_getMs()),
+             ((l_eGNSSCode == GNSS_C_SUCCESS) ? "FIX" : "NO_POSITION"));
+   #endif
+
+    /* Retry each second, less is not necessary */
+    vTime_WaitMs(1000);
+
+    /* Check if HDOP is acceptable, or the fix timeout is reached */
+
+  };
+
+  /* calculate time to fix */
+  l_sPosition.u8TimeToFix = (u32Time_getMs() - l_u32TimeStart) / 1000u;
+#ifdef DEBUG
+  Serial.printf("[%u] GNSSFIX (%u ms)\r\n", (unsigned int)u32Time_getMs(), (unsigned int)(u32Time_getMs() - l_u32TimeStart));
+#endif
+
+  /* If fix gps failed then set default values */
+  if(l_sPosition.f32Hdop == 0.0f)
+  {
+    l_sPosition.u8Day = 1u;
+    l_sPosition.u8Month = 1u;
+    l_sPosition.u8Year = 20u;
+  }
+
+  /* Copy Position in global variable */
+  memcpy(&(g_sSensorsData.sPosition), &l_sPosition, sizeof(sPosition_t));
+
+  if(GNSS_C_SUCCESS != l_eGNSSCode)
+  {
+    l_eSensorMngrErrorCode = SENSOR_MNGR_ERROR;
+  }else{
+    l_eSensorMngrErrorCode = SENSOR_MNGR_SUCCESS;
+  }
+
+  return l_eSensorMngrErrorCode;
+}
+
  //sensor init
 void sensor_init()
 {
