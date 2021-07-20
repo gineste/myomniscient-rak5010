@@ -79,7 +79,9 @@ void setup()
   bg96_init();
   Serial1.begin(SERIAL_BAUDRATE);
   while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
+  delay(5000);                    // necessary for BG96 boot on ext battery
 
+  // blink led
   digitalWrite(LED_GREEN_PIN, HIGH);
   delay(250);
   digitalWrite(LED_GREEN_PIN, LOW);
@@ -88,8 +90,6 @@ void setup()
   delay(250);
   digitalWrite(LED_GREEN_PIN, LOW);
   delay(250);
-
-  delay(4000);
   
   eBG96_TurnOn();
   bg96_at_wait_rsp("ATE1", GSM_CMD_RSP_OK_RF);       //turn off the echo mode  (ATE1  echo on)
@@ -106,7 +106,7 @@ void setup()
   
   //eSensorMngr_UpdatePosition(TIME_TO_FIX_MAX);
   //vBG96_GNSS_TurnOff();
-  connect(0u);
+  //connect(0u);
   eBG96_TurnOff();
   vBG96_GNSS_TurnOff();
 
