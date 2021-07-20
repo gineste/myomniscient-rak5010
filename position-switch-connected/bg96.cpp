@@ -199,8 +199,8 @@ void bg96_init()
 
   digitalWrite(bg96_RESET, 0);
   digitalWrite(bg96_W_DISABLE, 1);
-  digitalWrite(bg96_GPS_EN, 1);
-  //digitalWrite(bg96_GPS_EN, 0);
+  //digitalWrite(bg96_GPS_EN, 1);
+  digitalWrite(bg96_GPS_EN, 0);
 }
 
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
@@ -560,8 +560,7 @@ void vBG96_GNSS_TurnOn(void)
 {
   digitalWrite(bg96_GPS_EN, HIGH);
   vTime_WaitMs(10);
-
-  //bg96_at_wait_rsp("AT+QGPS=1", GSM_CMD_RSP_OK_RF);
+  bg96_at_wait_rsp("AT+QGPS=1", GSM_CMD_RSP_OK_RF);
   //bg96_at("AT+QGPS=1");
 }
 
@@ -573,8 +572,8 @@ void vBG96_GNSS_TurnOn(void)
  */
 void vBG96_GNSS_TurnOff(void)
 {
+  bg96_at_wait_rsp("AT+QGPSEND", GSM_CMD_RSP_OK_RF);
   digitalWrite(bg96_GPS_EN, LOW);
-  //bg96_at_wait_rsp("AT+QGPSEND", GSM_CMD_RSP_OK_RF);
   //bg96_at("AT+QGPSEND");
 }
 

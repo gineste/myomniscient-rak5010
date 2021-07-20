@@ -70,8 +70,8 @@ void setup()
 
   digitalWrite(LED_GREEN_PIN, LOW);
   
-  attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
-  attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
+  /*attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
+  attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);*/
   
  // nRF5x_lowPower.enableWakeupByInterrupt(NRF_IO3, FALLING);
  // nRF5x_lowPower.enableWakeupByInterrupt(NRF_IO4, FALLING);
@@ -92,10 +92,11 @@ void setup()
   delay(250);
   
   eBG96_TurnOn();
-  bg96_at_wait_rsp("ATE1", GSM_CMD_RSP_OK_RF);       //turn off the echo mode  (ATE1  echo on)
-  bg96_at_wait_rsp("AT+QGPSCFG=\"gpsnmeatype\",1", GSM_CMD_RSP_OK_RF);
-  bg96_at_wait_rsp("AT+QGPS=1, 1, 1, 1, 1", GSM_CMD_RSP_OK_RF);  
-  //eBG96_TurnOff();
+  bg96_at_wait_rsp("ATE0", GSM_CMD_RSP_OK_RF);        // turn off the echo mode
+  //bg96_at_wait_rsp("AT+CFUN=4", GSM_CMD_RSP_OK_RF); // airplane mode
+  //bg96_at_wait_rsp("AT+QGPSCFG=\"gpsnmeatype\",1", GSM_CMD_RSP_OK_RF);
+  //bg96_at_wait_rsp("AT+QGPS=1, 1, 1, 1, 1", GSM_CMD_RSP_OK_RF);  
+  /*//eBG96_TurnOff();
   
   //bg96_at("AT+CGATT=1");          //Connect to network
   //delay(3000);
@@ -108,9 +109,20 @@ void setup()
   //vBG96_GNSS_TurnOff();
   //connect(0u);
   eBG96_TurnOff();
+  vBG96_GNSS_TurnOff();*/
+
+  //bg96_at_wait_rsp("AT+QPOWD=0", GSM_CMD_RSP_OK_RF);
+
+  digitalWrite(LED_GREEN_PIN, HIGH);
+  if (eBG96_TurnOff() != BG96_SUCCESS)
+  {
+    digitalWrite(LED_GREEN_PIN, LOW);
+    eBG96_TurnOff();
+  }
   vBG96_GNSS_TurnOff();
+  Serial1.end();
 
-  digitalWrite(LED_GREEN_PIN, HIGH);
+
   delay(250);
   digitalWrite(LED_GREEN_PIN, LOW);
   delay(250);
@@ -119,8 +131,11 @@ void setup()
   digitalWrite(LED_GREEN_PIN, LOW);
   delay(250);
 
+#ifdef DEBUG
   Serial.printf("Go to sleep...\r\n");
-  delay(500);
+#endif
+  //delay(500);
+    //nRF5x_lowPower.powerMode(POWER_MODE_LOW_POWER);
   //nRF5x_lowPower.powerMode(POWER_MODE_OFF);
 }
 
@@ -136,7 +151,7 @@ void loop()
   delay(1000);
 #endif
 
-  // trailer is full
+ /* // trailer is full
   if (g_u8FlagFull == 1u)
   {
     g_u8FlagFull = 0u;
@@ -160,7 +175,12 @@ void loop()
     }
   }
 
-  delay(4000);
+  delay(4000);*/
+  
+  //digitalWrite(LED_GREEN_PIN, !digitalRead(LED_GREEN_PIN));
+  delay(1000);
+  
+  //nRF5x_lowPower.powerMode(POWER_MODE_LOW_POWER);
 }
 
 /****************************************************************************************
