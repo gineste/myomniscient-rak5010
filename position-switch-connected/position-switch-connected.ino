@@ -42,18 +42,12 @@
 /****************************************************************************************
    Private function declarations
  ****************************************************************************************/
-static void nrf_io3_it_cb(void);        // trailer full interrupt CB
-static void nrf_io4_it_cb(void);        // trailer empty interrupt CB
 static void vUpdateTiming(void);        // update timings
 static void vStatem_ContextSetup(void); // setup context
 
 /****************************************************************************************
    Variable declarations
  ****************************************************************************************/
-uint8_t g_u8FlagFull = 0;     // trailer full flag
-uint8_t g_u8FlagEmpty = 0;    // trailer empty flag
-
-
 static sStatemContext_t g_sStatemContext = {
     .u64lastTimeUpdateMs = 0,     // in ms => last time we updated the timings
     .u32lastStatusS = 0,          // time in S since last send over network
@@ -76,54 +70,34 @@ void setup()
 #endif
 
   pinMode(LED_GREEN_PIN, OUTPUT);
-  pinMode(NRF_IO3, INPUT_PULLUP);
-  pinMode(NRF_IO4, INPUT_PULLUP);
-
   digitalWrite(LED_GREEN_PIN, LOW);
   
-  /*attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
-  attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);*/
-  
- // nRF5x_lowPower.enableWakeupByInterrupt(NRF_IO3, FALLING);
- // nRF5x_lowPower.enableWakeupByInterrupt(NRF_IO4, FALLING);
-
   vStatem_ContextSetup();
 
+  vSensorMngr_Init();
+
   bg96_init();
-  Serial1.begin(SERIAL_BAUDRATE);
-  while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
-  delay(5000);                    // necessary for BG96 boot on ext battery
 
   // blink led once
   digitalWrite(LED_GREEN_PIN, HIGH);
   delay(250);
   digitalWrite(LED_GREEN_PIN, LOW);
   delay(250);
-  
-  //eBG96_TurnOn();
-  //eBG96_SendCommand("ATE0", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);        // turn off the echo mode
-  //eBG96_SendCommand("AT+CFUN=4", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT); // airplane mode
-  //eBG96_SendCommand("AT+QGPSCFG=\"gpsnmeatype\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  //eBG96_SendCommand("AT+QGPS=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);  
-  //eBG96_TurnOff();
-  
-  //bg96_at("AT+CGATT=1");          //Connect to network
-  //delay(3000);
-  //eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT);  
-  //eBG96_SetRATSearchSeq("01");       /* GSM */
-  //bg96_at("AT+QCFG=1"); //GSM mode
-  //delay(2000);
-  //eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  //eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT);
-  
-  //connect(0u);
 
-  eGNSS_TurnOff();
+  // send status at boot and turn off
+#ifdef SEND_STATUS_AT_BOOT
+  Serial1.begin(SERIAL_BAUDRATE);
+  while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
+  delay(5000);                    // necessary for BG96 boot on ext battery
+  
+  eBG96_TurnOn();
+  connect();
   if (eBG96_TurnOff() != BG96_SUCCESS)
   {
     eBG96_TurnOff();
   }
   Serial1.end();
+#endif
 }
 
 /**************************************************************************/
@@ -139,6 +113,16 @@ void loop()
 #endif
   vUpdateTiming();
 
+  eSensorMngr_UpdateSwitch();
+
+  // check event msg send alarm
+  if (1u == u8SensorMngr_SwitchEventReadyGet())
+  {
+    vSensorMngr_SwitchEventReadySet(0u);
+    connect();
+  }
+
+  // check status msg send alarm
   if ((STATUS_SEND_DUTY > 0) && (g_sStatemContext.u32lastStatusS >= STATUS_SEND_DUTY)) 
   {
     g_sStatemContext.u32lastStatusS = 0;
@@ -160,7 +144,7 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-    connect(0u);
+    connect();
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
@@ -177,30 +161,6 @@ void loop()
     digitalWrite(LED_GREEN_PIN, LOW);
     delay(250);
   }
-
- /* // trailer is full
-  if (g_u8FlagFull == 1u)
-  {
-    g_u8FlagFull = 0u;
-    if (digitalRead(NRF_IO4) == HIGH)
-    {
-      digitalWrite(LED_GREEN_PIN, HIGH);   
-      delay(100);
-      connect(1u);
-    }
-  }
-
-  // trailer is empty
-  if (g_u8FlagEmpty == 1u)
-  {
-    g_u8FlagEmpty = 0u;
-    if (digitalRead(NRF_IO3) == HIGH)
-    {
-      digitalWrite(LED_GREEN_PIN, LOW);   
-      delay(100);
-      connect(0u);
-    }
-  }*/
   
   delay(1000);
 }
@@ -208,13 +168,6 @@ void loop()
 /****************************************************************************************
    Private functions
  ****************************************************************************************/
-static void nrf_io3_it_cb() {
-  g_u8FlagFull = 1;
-}
-
-static void nrf_io4_it_cb() {
-  g_u8FlagEmpty = 1;
-}
 
 /**
  * On every machine cycle, call the timing update;

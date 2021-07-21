@@ -24,7 +24,8 @@
 #define DEBUG
 #define SERIAL_BAUDRATE     (115200)
 
-#define STATUS_SEND_DUTY    (10u)       // period in seconds to send status  msg
+//#define SEND_STATUS_AT_BOOT              // send status at boot if def
+#define STATUS_SEND_DUTY    (600u)       // period in seconds to send status  msg
 
 #define APN_URL             "nxt17.net" //"sl2sfr"
 #define APN_USERNAME        ""

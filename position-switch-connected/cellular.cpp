@@ -22,13 +22,15 @@
 
 #include "BG96.h"
 #include "BG96_LTE.h"
+#include "sensors.h"
 
 #include "cellular.h"
 
 /****************************************************************************************
    Defines
  ****************************************************************************************/
-
+#define JSON_STR_MAX_LEN          (1024u)
+#define JSON_DATA_LEN             (60u)
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -45,7 +47,11 @@
    Public functions
  ****************************************************************************************/
 //network connect
-void connect(uint8_t p_u8Flag) {
+void connect(void) {
+  char l_achJson[JSON_DATA_LEN] = {0};
+  
+  s_SensorMngrData_t l_sSensorsData = *(psSensorMngr_GetSensorData());
+  
   eBG96_SetRATSearchSeq("01");  // GSM
   eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   
@@ -66,19 +72,14 @@ void connect(uint8_t p_u8Flag) {
   //Serial1.write("https://webhook.site/b80027c3-ec69-4694-b32d-b640549c6213\r");
   Serial1.write("https://webhook.site/15cc74bf-54b7-4b93-8746-c023eee63d32\r");
   delay(3000);
+
   bg96_at("AT+QHTTPPOST=58,80,80");//48 is length of the post data
   delay(3000);
 
-  if (p_u8Flag == 0u)
-  {
-    // empty
-    Serial1.write("{TOR_state: {TOR1_current_state: 1,TOR2_current_state: 0}}\r");
-  }
-  else
-  {
-    // full
-    Serial1.write("{TOR_state: {TOR1_current_state: 0,TOR2_current_state: 1}}\r");
-  }
+  memset(l_achJson, 0, JSON_DATA_LEN);
+  sprintf(l_achJson, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_sSensorsData.u8TOR1, l_sSensorsData.u8TOR2);
+  Serial1.write(l_achJson);
+    
   delay(3000);
 }
 

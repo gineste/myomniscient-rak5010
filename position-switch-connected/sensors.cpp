@@ -44,6 +44,8 @@
 /****************************************************************************************
  * Private function declarations
  ****************************************************************************************/
+static void nrf_io3_it_cb(void);        // trailer full interrupt CB
+static void nrf_io4_it_cb(void);        // trailer empty interrupt CB
 
 /****************************************************************************************
  * Variable declarations
@@ -51,9 +53,29 @@
 TwoWire *wi = &Wire;
 static s_SensorMngrData_t g_sSensorsData = { 0 };
 
+// switch event flags
+uint8_t g_u8FlagFull = 0;     // trailer full flag
+uint8_t g_u8FlagEmpty = 0;    // trailer empty flag
+uint8_t g_u8SwitchEventReady = 0u;
+
 /****************************************************************************************
  * Public functions
  ****************************************************************************************/ 
+ 
+ /**@brief   Function to init all sensors data.
+ */
+void vSensorMngr_Init(void)
+{
+  pinMode(NRF_IO3, INPUT_PULLUP);
+  pinMode(NRF_IO4, INPUT_PULLUP);
+  
+  attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
+  attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
+  
+  // read initial switch state
+  vSensorMngr_ReadnUpdateSwitch();
+}
+
  
  /**@brief   Function to get all sensors data.
  * @return  pointer on sensors data structure.
@@ -61,6 +83,96 @@ static s_SensorMngrData_t g_sSensorsData = { 0 };
 s_SensorMngrData_t *psSensorMngr_GetSensorData(void)
 {
  return &g_sSensorsData;
+}
+
+/**@brief   Function to read and update switch position values
+ * @return  Error code.
+ */
+void vSensorMngr_ReadnUpdateSwitch(void)
+{
+  if (digitalRead(NRF_IO3) == LOW)    // pullup
+  {
+    g_sSensorsData.u8TOR1 = 1u;
+  }else{
+    g_sSensorsData.u8TOR1 = 0u;
+  }
+  
+  if (digitalRead(NRF_IO4) == LOW)    // pullup
+  {
+    g_sSensorsData.u8TOR2 = 1u;
+  }else{
+    g_sSensorsData.u8TOR2 = 0u;
+  }
+}
+
+/**@brief   Function to update switch position values
+ * @return  Error code.
+ */
+e_SensorMngr_ErrorCode_t eSensorMngr_UpdateSwitch(void)
+{
+  if (g_u8FlagFull == 1u)
+  {
+    g_u8SwitchEventReady = 1u;
+    g_u8FlagFull = 0u;
+    g_sSensorsData.u8TOR1 = 1u;
+    
+    if (digitalRead(NRF_IO4) == HIGH)       // check if other position deactivate (pullup)
+    {
+      g_sSensorsData.u8TOR2 = 0u;
+      
+      // blink led once
+      digitalWrite(LED_GREEN_PIN, HIGH);
+      delay(250);
+      digitalWrite(LED_GREEN_PIN, LOW);
+      delay(250);
+
+    #ifdef DEBUG
+      Serial.printf("TOR1 switched ON\r\n");
+    #endif
+    }
+  }
+
+  // trailer is empty
+  if (g_u8FlagEmpty == 1u)
+  {
+    g_u8SwitchEventReady = 1u;
+    g_u8FlagEmpty = 0u;
+    g_sSensorsData.u8TOR2 = 1u;
+    
+    if (digitalRead(NRF_IO3) == HIGH)       // check if other position deactivate (pullup)
+    {
+      g_sSensorsData.u8TOR1 = 0u;
+      
+      // blink led once
+      digitalWrite(LED_GREEN_PIN, HIGH);
+      delay(250);
+      digitalWrite(LED_GREEN_PIN, LOW);
+      delay(250);
+
+    #ifdef DEBUG
+      Serial.printf("TOR2 switched ON\r\n");
+    #endif
+    }
+  }
+}
+
+/**@brief   Function to get if switch event is ready to be sent
+ * @return  1 if ready, 0 if not.
+ */
+uint8_t u8SensorMngr_SwitchEventReadyGet(void)
+{
+  return g_u8SwitchEventReady;
+}
+
+/**@brief   Function to set if a switch event is ready to be sent
+ * @param   p_u8IsReady : 1 is ready, 0 is not
+ */
+void vSensorMngr_SwitchEventReadySet(uint8_t p_u8IsReady)
+{
+  if ((p_u8IsReady == 0u) || (p_u8IsReady == 1u))
+  {
+    g_u8SwitchEventReady = p_u8IsReady; 
+  }
 }
 
 /**@brief   Function to perform a gps position.
@@ -133,211 +245,30 @@ e_SensorMngr_ErrorCode_t eSensorMngr_UpdatePosition(uint32_t p_u32TimeoutInSecon
   return l_eSensorMngrErrorCode;
 }
 
- //sensor init
-void sensor_init()
-{
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x20));
-  wi->write(byte(0x57));  
-  wi->endTransmission();
-  delay(5);
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x23));
-  wi->write(byte(0x08));  
-  wi->endTransmission();
-  delay(5);  
-
-  wi->beginTransmission(shtc3_addr);
-  wi->write(byte(0x35));
-  wi->write(byte(0x17));  
-  wi->endTransmission();
-  delay(5);  
-  
-  wi->beginTransmission(shtc3_addr);
-  wi->write(byte(0xEF));
-  wi->write(byte(0xC8));  
-  wi->endTransmission();
-  delay(5);
-
-
-  wi->beginTransmission(opt3001_addr);
-  wi->write(byte(0x01));
-  wi->write(byte(0xCC));
-  wi->write(byte(0x10));  
-  wi->endTransmission();
-  delay(5);
-  
-  wi->beginTransmission(lps22hb_addr);
-  wi->write(byte(0x10));
-  wi->write(byte(0x50)); 
-  wi->endTransmission();
-}
-
-//acc data
-void acc_data_show()
-{
-  byte acc_h;
-  byte acc_l;
-  int x = 0;
-  int y = 0;
-  int z = 0;
-  float accx;
-  float accy;
-  float accz;
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x28));
-  wi->endTransmission();
-  wi->requestFrom(lis3dh_addr, 1);
-  while(wi->available()){
-    acc_l = wi->read();
-  } 
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x29));
-  wi->endTransmission();
-  wi->requestFrom(lis3dh_addr, 1);
-  while(wi->available()){
-    acc_h = wi->read();
-  }
-  x = (acc_h << 8) | acc_l;
-  if(x<0x8000){x=x;}else{x=x-0x10000;}
-  accx = x*4000/65536.0;
-  
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x2a));
-  wi->endTransmission();
-  wi->requestFrom(lis3dh_addr, 1);
-  while(wi->available()){
-    acc_l = wi->read();
-  } 
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x2b));
-  wi->endTransmission();
-  wi->requestFrom(lis3dh_addr, 1);
-  while(wi->available()){
-    acc_h = wi->read();
-  }
-  y = (acc_h << 8) | acc_l;
-  if(y<0x8000){y=y;}else{y=y-0x10000;}
-  accy = y*4000/65536.0;
-  
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x2c));
-  wi->endTransmission();
-  wi->requestFrom(lis3dh_addr, 1);
-  while(wi->available()){
-    acc_l = wi->read();
-  } 
-  wi->beginTransmission(lis3dh_addr);
-  wi->write(byte(0x2d));
-  wi->endTransmission();
-  wi->requestFrom(lis3dh_addr, 1);
-  while(wi->available()){
-    acc_h = wi->read();
-  }
-  z = (acc_h << 8) | acc_l;
-  if(z<0x8000){z=z;}else{z=z-0x10000;}
-  accz = z*4000/65536.0;
-  Serial.print("ACC(mg): x=");
-  Serial.print(accx);
-  Serial.print(" y=");
-  Serial.print(accy);
-  Serial.print(" z=");
-  Serial.println(accz);  
-}
-
-//light data
-void light_show()
-{
-  byte tmp[2];
-  int i=0;
-  int m;
-  int e;
-  double h;
-  float light;
-  wi->beginTransmission(opt3001_addr);
-  wi->write(byte(0x00));
-  wi->endTransmission();
-  wi->requestFrom(opt3001_addr, 2);
-  while(wi->available()){
-    tmp[i++] = wi->read();
-  }
-  m=((tmp[0]<<8) | tmp[1]) & 0x0FFF;
-  e=(((tmp[0]<<8) | tmp[1]) & 0xF000) >> 12;
-  h= pow(2,e);
-  light = m*(0.01*h);
-  Serial.print("Light=");
-  Serial.println(light); 
-}
-
-//pressure data
-void pressure_data_show()
-{
-  byte xl;
-  byte l;
-  byte h;
-  int pre;
-  float p;
-  wi->beginTransmission(lps22hb_addr);
-  wi->write(byte(0x28));
-  wi->endTransmission();
-  wi->requestFrom(lps22hb_addr, 1);
-  while(wi->available()){
-    xl = wi->read();
-  } 
-  wi->beginTransmission(lps22hb_addr);
-  wi->write(byte(0x29));
-  wi->endTransmission();
-  wi->requestFrom(lps22hb_addr, 1);
-  while(wi->available()){
-    l = wi->read();
-  }
-  
-  wi->beginTransmission(lps22hb_addr);
-  wi->write(byte(0x2a));
-  wi->endTransmission();
-  wi->requestFrom(lps22hb_addr, 1);
-  while(wi->available()){
-    h = wi->read();
-  } 
-  pre = (h<<16) | (l<<8) | xl;
-  if(pre & 0x00800000){
-    pre |= 0xFF000000;
-  }
-  p= pre/4096.0;
-  Serial.print("Pressure(HPa) =");
-  Serial.println(p); 
-}
-
-//temperature & humidity
-void environment_data_show()
-{
-  byte t[6];
-  int i=0;
-  float _temperature;
-  float _humidity;
-  wi->beginTransmission(shtc3_addr);
-  wi->write(byte(0x7C));
-  wi->write(byte(0xA2));  
-  wi->endTransmission();
-  
-  wi->beginTransmission(shtc3_addr);
-  wi->endTransmission();
-  wi->requestFrom(shtc3_addr, 6);
-  while(wi->available()){
-    t[i++] = wi->read();
-  } 
-  _temperature= (t[1]|(t[0]<<8))*175/65536.0 -45.0;
-  _humidity=(t[4]|(t[3]<<8))*100/65536.0;
-  Serial.print("Temperature =");
-  Serial.print(_temperature); 
-  Serial.print(" humidity =");
-  Serial.println(_humidity);  
-  Serial.println("");
-}
-
 /****************************************************************************************
  * Private functions
  ****************************************************************************************/
+static void nrf_io3_it_cb() {
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time > 200) 
+  {
+    g_u8FlagFull = 1;
+  }
+  last_interrupt_time = interrupt_time;
+}
+
+static void nrf_io4_it_cb() {
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time > 200) 
+  {
+    g_u8FlagEmpty = 1;
+  }
+  last_interrupt_time = interrupt_time;
+}
 
 /****************************************************************************************
  * End Of File

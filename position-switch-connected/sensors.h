@@ -57,29 +57,48 @@ typedef struct _GNSS_POSITION_ {
 } sPosition_t;
 
 typedef struct __attribute__ ((__packed__)) _SENSOR_MNGR_DATA_  {
-   uint8_t      u8Switch;       /* switch position : 1 or 2 */
+   uint8_t      u8TOR1;         /* switch pos 1 : full */
+   uint8_t      u8TOR2;         /* switch pos 2 : empty */
    sPosition_t  sPosition;      /* Last gps position */
 }s_SensorMngrData_t;
 
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
+/**@brief   Function to init all sensors data.
+ */
+void vSensorMngr_Init(void);
 
 /**@brief   Function to get all sensors data.
  * @return  sensors data structure.
  */
 s_SensorMngrData_t *psSensorMngr_GetSensorData(void);
+
+/**@brief   Function to read and update switch position values
+ * @return  Error code.
+ */
+void vSensorMngr_ReadnUpdateSwitch(void);
+
+/**@brief   Function to know if a switch event is ready to be sent
+ * @return  1 if ready, 0 if not.
+ */
+uint8_t u8SensorMngr_SwitchEventReadyGet(void);
+
+/**@brief   Function to set if a switch event is ready to be sent
+ * @param   p_u8IsReady : 1 is ready, 0 is not
+ */
+void vSensorMngr_SwitchEventReadySet(uint8_t p_u8IsReady);
+
+/**@brief   Function to update switch position values
+ * @return  Error code.
+ */
+e_SensorMngr_ErrorCode_t eSensorMngr_UpdateSwitch(void);
+
 /**@brief   Function to perform a gps position.
  * @param p_u32TimeoutInSeconds Desired timeout for position acquisition
  * @param p_eGpsState      @see e_SensorMngr_GpsMode_t
  * @return  Error code.
  */
 e_SensorMngr_ErrorCode_t eSensorMngr_UpdatePosition(uint32_t p_u32TimeoutInSeconds);
-
-void sensor_init();
-void acc_data_show();           //acc data
-void light_show();              //light data
-void pressure_data_show();      //pressure data
-void environment_data_show();   //temperature & humidity
 
 #endif /* SENSORS_H_ */
