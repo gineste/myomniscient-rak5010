@@ -26,6 +26,7 @@
 #include "BG96.h"
 #include "BG96_LTE.h"
 #include "GNSS.h"
+#include "cellular.h"
 #include "config.h"
 #include "timeout.h"
 
@@ -34,10 +35,6 @@
  ****************************************************************************************/
 #define DEBOUNCE_DELAY_MS  (200)
 
-#define JSON_STR_MAX_LEN          (1024u)
-#define JSON_DATA_LEN             (128u)
-
-#define IP_MAX_SIZE           (16u)
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -47,7 +44,6 @@
  ****************************************************************************************/
 static void vUpdateTiming(void);        // update timings
 static void vStatem_ContextSetup(void); // setup context
-static void vSendData(void);
 
 /****************************************************************************************
    Variable declarations
@@ -78,10 +74,11 @@ void setup()
 #endif
 
   pinMode(LED_GREEN_PIN, OUTPUT);
-  digitalWrite(LED_GREEN_PIN, LOW);
-
   pinMode(NRF_IO3, INPUT_PULLUP);
   pinMode(NRF_IO4, INPUT_PULLUP);
+  
+  delay(10);
+  digitalWrite(LED_GREEN_PIN, LOW);
   
   attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
   attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
@@ -107,7 +104,7 @@ void setup()
   delay(5000);                    // necessary for BG96 boot on ext battery
   
   eBG96_TurnOn();
-  connect();
+  vCellular_SendData();
   if (eBG96_TurnOff() != BG96_SUCCESS)
   {
     eBG96_TurnOff();
@@ -129,8 +126,6 @@ void loop()
   Serial.printf("[%d] LOOP\r\n", (uint32_t) l_u64Timestamp);
 #endif
   vUpdateTiming();
-
-  //eSensorMngr_UpdateSwitch();
 
   // trailer is full
   if ((u32Time_getMs() - g_u32LastDebounceTimeFull) > DEBOUNCE_DELAY_MS)
@@ -174,7 +169,7 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-    vSendData();
+    vCellular_SendData();
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
@@ -204,7 +199,7 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-    vSendData();
+    vCellular_SendData();
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
@@ -261,45 +256,6 @@ static void nrf_io3_it_cb() {
 
 static void nrf_io4_it_cb() {
     g_u32LastDebounceTimeEmpty = u32Time_getMs();
-}
-
-static void vSendData(void) {
-  char l_achJson[JSON_DATA_LEN] = {0};
-  eBG96ErrorCode_t l_eBg96Code = BG96_SUCCESS;
-  eNetCtxStat_t l_eCtxState = NET_CTX_DEACTIVATE;
-  char l_achIp[IP_MAX_SIZE] = {0};
-
-  s_SensorMngrData_t l_sSensorsData = *(psSensorMngr_GetSensorData());
-  
-  eBG96_SetRATSearchSeq("01");  // GSM
-  eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  
-  //eBG96_SendCommand("AT+QNWINFO", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-
-  l_eBg96Code = eBG96_GetContextState(&l_eCtxState, l_achIp);
-  if((l_eBg96Code != BG96_SUCCESS) || (l_eCtxState != NET_CTX_ACTIVATE))
-  {
-    eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT); 
-  }
-
-  //Serial.println("get time");
-  //bg96_at("AT+QLTS=1"); //query GMT time from network
-  //delay(2000);
-
-  eBG96_SendCommand("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  eBG96_SendCommand("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-
-  //POST request
-  bg96_at("AT+QHTTPURL=57,80"); //57 is length of the url
-  delay(3000);
-  //Serial1.write("https://webhook.site/b80027c3-ec69-4694-b32d-b640549c6213\r");
-  Serial1.write("https://webhook.site/15cc74bf-54b7-4b93-8746-c023eee63d32\r");
-  delay(3000);
-
-  eBG96_SendCommand("AT+QHTTPPOST=58,80,80", GSM_CONNECT_STR, CONN_TIMEOUT);  // 58 is length of json body
-  memset(l_achJson, 0, JSON_DATA_LEN);
-  sprintf(l_achJson, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_sSensorsData.au8TORs[0], l_sSensorsData.au8TORs[1]);
-  eBG96_SendCommand(l_achJson, GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);
 }
 /****************************************************************************************
    End Of File

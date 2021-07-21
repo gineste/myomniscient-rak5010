@@ -28,8 +28,5 @@
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
- eBG96ErrorCode_t   eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword);
-eBG96ErrorCode_t    eBG96_ActiveContext(void);
-eBG96ErrorCode_t    eBG96_SetRATSearchSeq(char * p_pchSearchSeq);
 
 #endif /* BG96LTE_H_ */

@@ -84,4 +84,9 @@ void              bg96_at(char *at);   //this function is suitable for most AT c
 eBG96ErrorCode_t  eBG96_WaitResponse(char *rsp_value, uint32_t timeout_ms, const char * p_pchExpectedRsp);
 eBG96ErrorCode_t  eBG96_GetContextState(eNetCtxStat_t * p_peIpState, char * p_pchIp);
 
+
+ eBG96ErrorCode_t   eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword);
+eBG96ErrorCode_t    eBG96_ActiveContext(void);
+eBG96ErrorCode_t    eBG96_SetRATSearchSeq(char * p_pchSearchSeq);
+
 #endif /* BG96_H_ */

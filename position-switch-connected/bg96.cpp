@@ -37,6 +37,8 @@
 #define PWRKEY_PULSE_ON_MS  (600u) /* ms */
 #define PWRKEY_PULSE_OFF_MS (700u) /* ms */
 
+#define LTE_CMD_LEN        (256u)
+
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -238,25 +240,18 @@ eBG96ErrorCode_t eBG96_TurnOff(void)
 int Gsm_RxByte(void)
 {
   int c = -1;
-
-  //__disable_irq();
-  //if (rxCount > 0)
+  
+  if (Serial1.available() > 0)
   {
-    //c = Gsm_RxBuf[rxReadIndex];
-    if (Serial1.available() > 0)
-    {
-      c = char(Serial1.read());
-    }
-
-    rxReadIndex++;
-    if (rxReadIndex == GSM_RXBUF_MAXSIZE)
-    {
-      rxReadIndex = 0;
-    }
-    //rxCount--;
+    c = char(Serial1.read());
   }
-  //__enable_irq();
 
+  rxReadIndex++;
+  if (rxReadIndex == GSM_RXBUF_MAXSIZE)
+  {
+    rxReadIndex = 0;
+  }
+  
   return c;
 }
 
@@ -269,6 +264,7 @@ eBG96ErrorCode_t eBG96_WaitResponse(char *rsp_value, uint32_t timeout_ms, const 
   uint32_t i = 0;
   int       c;
   char *cmp_p = NULL;
+  uint8_t l_u8EOT = 0u;
 
   wait_len = strlen(p_pchExpectedRsp);
  
@@ -289,22 +285,27 @@ eBG96ErrorCode_t eBG96_WaitResponse(char *rsp_value, uint32_t timeout_ms, const 
     if (i >= 0 && rsp_value != NULL)
     {
       cmp_p = strstr(GSM_RSP, p_pchExpectedRsp);
-      if (cmp_p)
+      if (cmp_p != NULL)
       {
         if (i > wait_len && rsp_value != NULL)
         {
           memcpy(rsp_value, GSM_RSP, i);
         }
         l_eErrCode = BG96_SUCCESS;
-        break;
+        l_u8EOT = 1u;
       }else{
         l_eErrCode = BG96_ERROR_FAILED;
-      }
+        if((strstr(GSM_RSP, "ERROR\r\n") != NULL) ||
+            (strstr(GSM_RSP, "+CME ERROR:") != NULL))
+          {
+            /* Error */
+            l_u8EOT = 1u;
+          }
+        }
     }else{
         l_eErrCode = BG96_ERROR_PARAM;
     }
-  }
-  while (time_count > 0);
+  } while ((time_count > 0) && (l_u8EOT != 1u));
 
   return l_eErrCode;
 }
@@ -332,11 +333,77 @@ eBG96ErrorCode_t eBG96_GetContextState(eNetCtxStat_t * p_peIpState, char * p_pch
       if(sscanf(GSM_RSP, "+QIACT: %c, %c, %c, %s", &l_u8CtxId, &l_u8CtxState, &l_u8CtxType, p_pchIp) > 0)
       {
         *p_peIpState = (eNetCtxStat_t) l_u8CtxState;
+      
+        #ifdef DEBUG
+          Serial.printf("%s\r\n", GSM_RSP);
+        #endif
       }else{
       }
     }
   }else{
     l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+}
+
+/**@brief Set Apn information
+   @param p_pchApn         Apn operator address
+   @param p_pchUser        Apn access username
+   @param p_pchPassword    Apn access password
+
+   @info Always use IPv4 context
+
+   @retval BG96_SUCCESS
+   @retval BG96_ERROR_FAILED
+   @retval BG96_ERROR_PARAM
+*/
+eBG96ErrorCode_t eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword)
+{
+  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
+  char l_achCmd[MAX_CMD_LEN] = {0};
+
+  /* By default always use IPv4 context */
+  if ((p_pchApn != NULL) && (p_pchUser != NULL) && (p_pchPassword != NULL))
+  {
+    snprintf(l_achCmd, MAX_CMD_LEN, "AT+QICSGP=1,1,\"%s\",\"%s\",\"%s\",1", p_pchApn, p_pchUser, p_pchPassword);
+    bg96_at(l_achCmd);
+    l_eCode = BG96_SUCCESS;
+  } else {
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+
+}
+
+/**@brief Active TCP/IP context
+   @param p_pchIp         Allocated IP returned by server
+   @retval BG96_SUCCESS
+   @retval BG96_ERROR_FAILED
+   @retval BG96_ERROR_PARAM
+*/
+eBG96ErrorCode_t eBG96_ActiveContext(void)
+{
+  bg96_at("AT+QIACT=1");
+  return BG96_SUCCESS;
+}
+
+/**@brief Set the searching sequence of RATs
+ * @param p_pchSearchSeq      numbers corresponding to searching sequence of RATs
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_SetRATSearchSeq(char * p_pchSearchSeq)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_PARAM;
+  char l_achCmd[LTE_CMD_LEN] = {0};
+
+  if (p_pchSearchSeq != NULL)
+  {
+    snprintf(l_achCmd, LTE_CMD_LEN, "AT+QCFG=\"nwscanseq\",%s,1", p_pchSearchSeq);
+    l_eCode = eBG96_SendCommand(l_achCmd, GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   }
 
   return l_eCode;
