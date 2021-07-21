@@ -21,7 +21,6 @@
 #include <SoftwareSerial.h>
 #include <Arduino.h>
 #include <math.h>
-#include <Arduino_nRF5x_lowPower.h> // LowPower Library for nRF5x
 
 #include "sensors.h"
 #include "BG96.h"
@@ -37,6 +36,8 @@
 
 #define JSON_STR_MAX_LEN          (1024u)
 #define JSON_DATA_LEN             (128u)
+
+#define IP_MAX_SIZE           (16u)
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -169,7 +170,16 @@ void loop()
     digitalWrite(LED_GREEN_PIN, LOW);
     delay(250);
     
+    Serial1.begin(SERIAL_BAUDRATE);
+    while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
+    delay(5000);                    // necessary for BG96 boot on ext battery
+    eBG96_TurnOn();
     vSendData();
+    if (eBG96_TurnOff() != BG96_SUCCESS)
+    {
+      eBG96_TurnOff();
+    }
+    Serial1.end();
   }
 
   // check status msg send alarm
@@ -255,19 +265,22 @@ static void nrf_io4_it_cb() {
 
 static void vSendData(void) {
   char l_achJson[JSON_DATA_LEN] = {0};
-
-  delay(500);
-  Serial.printf("Send data..\r\n");
-  delay(500);
+  eBG96ErrorCode_t l_eBg96Code = BG96_SUCCESS;
+  eNetCtxStat_t l_eCtxState = NET_CTX_DEACTIVATE;
+  char l_achIp[IP_MAX_SIZE] = {0};
 
   s_SensorMngrData_t l_sSensorsData = *(psSensorMngr_GetSensorData());
   
   eBG96_SetRATSearchSeq("01");  // GSM
   eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   
-  eBG96_SendCommand("AT+QNWINFO", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+  //eBG96_SendCommand("AT+QNWINFO", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
-  eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+  l_eBg96Code = eBG96_GetContextState(&l_eCtxState, l_achIp);
+  if((l_eBg96Code != BG96_SUCCESS) || (l_eCtxState != NET_CTX_ACTIVATE))
+  {
+    eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT); 
+  }
 
   //Serial.println("get time");
   //bg96_at("AT+QLTS=1"); //query GMT time from network
@@ -283,14 +296,10 @@ static void vSendData(void) {
   Serial1.write("https://webhook.site/15cc74bf-54b7-4b93-8746-c023eee63d32\r");
   delay(3000);
 
-  bg96_at("AT+QHTTPPOST=58,80,80");//48 is length of the post data
-  delay(3000);
-
+  eBG96_SendCommand("AT+QHTTPPOST=58,80,80", GSM_CONNECT_STR, CONN_TIMEOUT);  // 58 is length of json body
   memset(l_achJson, 0, JSON_DATA_LEN);
   sprintf(l_achJson, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_sSensorsData.au8TORs[0], l_sSensorsData.au8TORs[1]);
-  Serial1.write(l_achJson);
-    
-  delay(3000);
+  eBG96_SendCommand(l_achJson, GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);
 }
 /****************************************************************************************
    End Of File

@@ -83,8 +83,6 @@ eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint
   char tmp[MAX_CMD_LEN] = {0};
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
   int len = strlen(at);
-
-  Serial.printf("Send %s\r\n", at);
   
   if ((at != NULL) && (len <= MAX_CMD_LEN))
   {
@@ -309,6 +307,39 @@ eBG96ErrorCode_t eBG96_WaitResponse(char *rsp_value, uint32_t timeout_ms, const 
   while (time_count > 0);
 
   return l_eErrCode;
+}
+
+/**@brief Get current context status
+ * @param p_peIpState         ACTIVATED/DEACTIVATED
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_GetContextState(eNetCtxStat_t * p_peIpState, char * p_pchIp)
+{
+  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
+
+  uint8_t l_u8CtxId = 0u;
+  uint8_t l_u8CtxState = 0u;
+  uint8_t l_u8CtxType = 0u;
+
+  if((p_peIpState != NULL) && (p_pchIp != NULL))
+  {
+    l_eCode = eBG96_SendCommand("AT+QIACT?", GSM_CMD_RSP_OK_RF, APN_TIMEOUT);
+
+    if(l_eCode == BG96_SUCCESS)
+    {
+      if(sscanf(GSM_RSP, "+QIACT: %c, %c, %c, %s", &l_u8CtxId, &l_u8CtxState, &l_u8CtxType, p_pchIp) > 0)
+      {
+        *p_peIpState = (eNetCtxStat_t) l_u8CtxState;
+      }else{
+      }
+    }
+  }else{
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
 }
 
 /****************************************************************************************
