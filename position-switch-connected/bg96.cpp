@@ -84,6 +84,8 @@ eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
   int len = strlen(at);
 
+  Serial.printf("Send %s\r\n", at);
+  
   if ((at != NULL) && (len <= MAX_CMD_LEN))
   {
     strncpy(tmp, at, len);

@@ -54,9 +54,9 @@ TwoWire *wi = &Wire;
 static s_SensorMngrData_t g_sSensorsData = { 0 };
 
 // switch event flags
-uint8_t g_u8FlagFull = 0;     // trailer full flag
+/*uint8_t g_u8FlagFull = 0;     // trailer full flag
 uint8_t g_u8FlagEmpty = 0;    // trailer empty flag
-uint8_t g_u8SwitchEventReady = 0u;
+uint8_t g_u8SwitchEventReady = 0u;*/
 
 /****************************************************************************************
  * Public functions
@@ -65,15 +65,8 @@ uint8_t g_u8SwitchEventReady = 0u;
  /**@brief   Function to init all sensors data.
  */
 void vSensorMngr_Init(void)
-{
-  pinMode(NRF_IO3, INPUT_PULLUP);
-  pinMode(NRF_IO4, INPUT_PULLUP);
-  
-  attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
-  attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
-  
-  // read initial switch state
-  vSensorMngr_ReadnUpdateSwitch();
+{  
+  __NOP();
 }
 
  
@@ -85,24 +78,18 @@ s_SensorMngrData_t *psSensorMngr_GetSensorData(void)
  return &g_sSensorsData;
 }
 
-/**@brief   Function to read and update switch position values
- * @return  Error code.
+ /**@brief   Function to get TOR state.
  */
-void vSensorMngr_ReadnUpdateSwitch(void)
+uint8_t u8SensorMngr_TORStateGet(uint8_t p_u8TORIndex)
 {
-  if (digitalRead(NRF_IO3) == LOW)    // pullup
-  {
-    g_sSensorsData.u8TOR1 = 1u;
-  }else{
-    g_sSensorsData.u8TOR1 = 0u;
-  }
-  
-  if (digitalRead(NRF_IO4) == LOW)    // pullup
-  {
-    g_sSensorsData.u8TOR2 = 1u;
-  }else{
-    g_sSensorsData.u8TOR2 = 0u;
-  }
+  return (g_sSensorsData.au8TORs[p_u8TORIndex]);
+}
+
+ /**@brief   Function to set TOR state.
+ */
+uint8_t u8SensorMngr_TORStateSet(uint8_t p_u8TORIndex, uint8_t p_u8State)
+{
+  g_sSensorsData.au8TORs[p_u8TORIndex] = p_u8State;
 }
 
 /**@brief   Function to update switch position values
@@ -110,10 +97,12 @@ void vSensorMngr_ReadnUpdateSwitch(void)
  */
 e_SensorMngr_ErrorCode_t eSensorMngr_UpdateSwitch(void)
 {
+#if 0
   if (g_u8FlagFull == 1u)
   {
-    g_u8SwitchEventReady = 1u;
     g_u8FlagFull = 0u;
+    
+    g_u8SwitchEventReady = 1u;
     g_sSensorsData.u8TOR1 = 1u;
     
     if (digitalRead(NRF_IO4) == HIGH)       // check if other position deactivate (pullup)
@@ -135,8 +124,9 @@ e_SensorMngr_ErrorCode_t eSensorMngr_UpdateSwitch(void)
   // trailer is empty
   if (g_u8FlagEmpty == 1u)
   {
-    g_u8SwitchEventReady = 1u;
     g_u8FlagEmpty = 0u;
+    
+    g_u8SwitchEventReady = 1u;
     g_sSensorsData.u8TOR2 = 1u;
     
     if (digitalRead(NRF_IO3) == HIGH)       // check if other position deactivate (pullup)
@@ -154,25 +144,7 @@ e_SensorMngr_ErrorCode_t eSensorMngr_UpdateSwitch(void)
     #endif
     }
   }
-}
-
-/**@brief   Function to get if switch event is ready to be sent
- * @return  1 if ready, 0 if not.
- */
-uint8_t u8SensorMngr_SwitchEventReadyGet(void)
-{
-  return g_u8SwitchEventReady;
-}
-
-/**@brief   Function to set if a switch event is ready to be sent
- * @param   p_u8IsReady : 1 is ready, 0 is not
- */
-void vSensorMngr_SwitchEventReadySet(uint8_t p_u8IsReady)
-{
-  if ((p_u8IsReady == 0u) || (p_u8IsReady == 1u))
-  {
-    g_u8SwitchEventReady = p_u8IsReady; 
-  }
+#endif
 }
 
 /**@brief   Function to perform a gps position.
@@ -248,27 +220,13 @@ e_SensorMngr_ErrorCode_t eSensorMngr_UpdatePosition(uint32_t p_u32TimeoutInSecon
 /****************************************************************************************
  * Private functions
  ****************************************************************************************/
-static void nrf_io3_it_cb() {
-  static unsigned long last_interrupt_time = 0;
-  unsigned long interrupt_time = millis();
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - last_interrupt_time > 200) 
-  {
+/*static void nrf_io3_it_cb() {
     g_u8FlagFull = 1;
-  }
-  last_interrupt_time = interrupt_time;
 }
 
 static void nrf_io4_it_cb() {
-  static unsigned long last_interrupt_time = 0;
-  unsigned long interrupt_time = millis();
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - last_interrupt_time > 200) 
-  {
     g_u8FlagEmpty = 1;
-  }
-  last_interrupt_time = interrupt_time;
-}
+}*/
 
 /****************************************************************************************
  * End Of File

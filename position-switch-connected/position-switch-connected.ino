@@ -27,14 +27,16 @@
 #include "BG96.h"
 #include "BG96_LTE.h"
 #include "GNSS.h"
-#include "cellular.h"
 #include "config.h"
 #include "timeout.h"
 
 /****************************************************************************************
    Defines
  ****************************************************************************************/
+#define DEBOUNCE_DELAY_MS  (200)
 
+#define JSON_STR_MAX_LEN          (1024u)
+#define JSON_DATA_LEN             (128u)
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -44,6 +46,7 @@
  ****************************************************************************************/
 static void vUpdateTiming(void);        // update timings
 static void vStatem_ContextSetup(void); // setup context
+static void vSendData(void);
 
 /****************************************************************************************
    Variable declarations
@@ -52,6 +55,10 @@ static sStatemContext_t g_sStatemContext = {
     .u64lastTimeUpdateMs = 0,     // in ms => last time we updated the timings
     .u32lastStatusS = 0,          // time in S since last send over network
 };
+
+static uint8_t g_u8SwitchEventReady = 0u;
+static uint32_t g_u32LastDebounceTimeFull = 0u;
+static uint32_t g_u32LastDebounceTimeEmpty = 0u;
 /****************************************************************************************
    Public functions
  ****************************************************************************************/
@@ -71,10 +78,18 @@ void setup()
 
   pinMode(LED_GREEN_PIN, OUTPUT);
   digitalWrite(LED_GREEN_PIN, LOW);
+
+  pinMode(NRF_IO3, INPUT_PULLUP);
+  pinMode(NRF_IO4, INPUT_PULLUP);
+  
+  attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
+  attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
   
   vStatem_ContextSetup();
 
   vSensorMngr_Init();
+  u8SensorMngr_TORStateSet(0, (digitalRead(NRF_IO3) == LOW));
+  u8SensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
 
   bg96_init();
 
@@ -108,18 +123,53 @@ void setup()
 void loop()
 {
   uint64_t l_u64Timestamp = u32Time_getMs();
+  uint8_t l_u8State = 0u;
 #ifdef DEBUG
   Serial.printf("[%d] LOOP\r\n", (uint32_t) l_u64Timestamp);
 #endif
   vUpdateTiming();
 
-  eSensorMngr_UpdateSwitch();
+  //eSensorMngr_UpdateSwitch();
+
+  // trailer is full
+  if ((u32Time_getMs() - g_u32LastDebounceTimeFull) > DEBOUNCE_DELAY_MS)
+  {  
+    l_u8State = (digitalRead(NRF_IO3) == LOW);    // pull up
+    
+    if (l_u8State != u8SensorMngr_TORStateGet(0))
+    {
+      g_u8SwitchEventReady = 1u;
+      u8SensorMngr_TORStateSet(0, (digitalRead(NRF_IO3) == LOW));
+    }
+  }
+
+  // trailer is empty
+  if ((u32Time_getMs() - g_u32LastDebounceTimeEmpty) > DEBOUNCE_DELAY_MS)
+  {   
+    l_u8State = (digitalRead(NRF_IO4) == LOW);    // pull up
+    
+    if (l_u8State != u8SensorMngr_TORStateGet(1))
+    {
+      g_u8SwitchEventReady = 1u;
+      u8SensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
+    }
+  }
 
   // check event msg send alarm
-  if (1u == u8SensorMngr_SwitchEventReadyGet())
+  if (1u == g_u8SwitchEventReady)
   {
-    vSensorMngr_SwitchEventReadySet(0u);
-    connect();
+    g_u8SwitchEventReady = 0u;
+
+    digitalWrite(LED_GREEN_PIN, HIGH);
+    delay(250);
+    digitalWrite(LED_GREEN_PIN, LOW);
+    delay(250);
+    digitalWrite(LED_GREEN_PIN, HIGH);
+    delay(250);
+    digitalWrite(LED_GREEN_PIN, LOW);
+    delay(250);
+    
+    vSendData();
   }
 
   // check status msg send alarm
@@ -144,7 +194,7 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-    connect();
+    vSendData();
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
@@ -193,6 +243,54 @@ static void vStatem_ContextSetup(void)
   /* context default values */
   g_sStatemContext.u64lastTimeUpdateMs = 0;
   g_sStatemContext.u32lastStatusS = 0;
+}
+
+static void nrf_io3_it_cb() {
+    g_u32LastDebounceTimeFull = u32Time_getMs();
+}
+
+static void nrf_io4_it_cb() {
+    g_u32LastDebounceTimeEmpty = u32Time_getMs();
+}
+
+static void vSendData(void) {
+  char l_achJson[JSON_DATA_LEN] = {0};
+
+  delay(500);
+  Serial.printf("Send data..\r\n");
+  delay(500);
+
+  s_SensorMngrData_t l_sSensorsData = *(psSensorMngr_GetSensorData());
+  
+  eBG96_SetRATSearchSeq("01");  // GSM
+  eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+  
+  eBG96_SendCommand("AT+QNWINFO", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+
+  eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+
+  //Serial.println("get time");
+  //bg96_at("AT+QLTS=1"); //query GMT time from network
+  //delay(2000);
+
+  eBG96_SendCommand("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+  eBG96_SendCommand("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+
+  //POST request
+  bg96_at("AT+QHTTPURL=57,80"); //57 is length of the url
+  delay(3000);
+  //Serial1.write("https://webhook.site/b80027c3-ec69-4694-b32d-b640549c6213\r");
+  Serial1.write("https://webhook.site/15cc74bf-54b7-4b93-8746-c023eee63d32\r");
+  delay(3000);
+
+  bg96_at("AT+QHTTPPOST=58,80,80");//48 is length of the post data
+  delay(3000);
+
+  memset(l_achJson, 0, JSON_DATA_LEN);
+  sprintf(l_achJson, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_sSensorsData.au8TORs[0], l_sSensorsData.au8TORs[1]);
+  Serial1.write(l_achJson);
+    
+  delay(3000);
 }
 /****************************************************************************************
    End Of File

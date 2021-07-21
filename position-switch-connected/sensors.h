@@ -23,6 +23,8 @@
  ****************************************************************************************/
 #define TIME_TO_FIX_MAX       (50u)   /* GPS time to fix max in seconds */
 
+#define TOR_NUMBER            (2u)
+
 /****************************************************************************************
  * Type definitions
  ****************************************************************************************/
@@ -57,9 +59,8 @@ typedef struct _GNSS_POSITION_ {
 } sPosition_t;
 
 typedef struct __attribute__ ((__packed__)) _SENSOR_MNGR_DATA_  {
-   uint8_t      u8TOR1;         /* switch pos 1 : full */
-   uint8_t      u8TOR2;         /* switch pos 2 : empty */
-   sPosition_t  sPosition;      /* Last gps position */
+   uint8_t      au8TORs[TOR_NUMBER]; /* switch 0 : full ; switch 1 : empty */
+   sPosition_t  sPosition;            /* Last gps position */
 }s_SensorMngrData_t;
 
 /****************************************************************************************
@@ -74,20 +75,11 @@ void vSensorMngr_Init(void);
  */
 s_SensorMngrData_t *psSensorMngr_GetSensorData(void);
 
-/**@brief   Function to read and update switch position values
- * @return  Error code.
- */
-void vSensorMngr_ReadnUpdateSwitch(void);
+uint8_t u8SensorMngr_TORStateGet(uint8_t p_u8TORIndex);
 
-/**@brief   Function to know if a switch event is ready to be sent
- * @return  1 if ready, 0 if not.
+ /**@brief   Function to set TOR state.
  */
-uint8_t u8SensorMngr_SwitchEventReadyGet(void);
-
-/**@brief   Function to set if a switch event is ready to be sent
- * @param   p_u8IsReady : 1 is ready, 0 is not
- */
-void vSensorMngr_SwitchEventReadySet(uint8_t p_u8IsReady);
+uint8_t u8SensorMngr_TORStateSet(uint8_t p_u8TORIndex, uint8_t p_u8State);
 
 /**@brief   Function to update switch position values
  * @return  Error code.
