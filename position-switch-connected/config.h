@@ -22,6 +22,9 @@
  ****************************************************************************************/
 
 #define DEBUG
+#define SERIAL_BAUDRATE     (115200)
+
+#define STATUS_SEND_DUTY    (10u)       // period in seconds to send status  msg
 
 #define APN_URL             "nxt17.net" //"sl2sfr"
 #define APN_USERNAME        ""
@@ -38,6 +41,10 @@
 /****************************************************************************************
  * Type definitions
  ****************************************************************************************/
+typedef struct _STATEM_CTX_ {
+  uint64_t  u64lastTimeUpdateMs;    /* in ms => last time we updated the timings */
+  uint32_t  u32lastStatusS;         /* time in S since last send over network */
+} sStatemContext_t;
 
 /****************************************************************************************
  * Public function declarations

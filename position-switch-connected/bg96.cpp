@@ -37,11 +37,7 @@
 #define bg96_GPS_EN     39
 #define bg96_STATUS     31
 
-#define RDY_TIMEOUT       (10000u) /* ms */
-#define CMD_TIMEOUT      (3000u) /* ms */
-#define PWDN_TIMEOUT       (65000u) /* ms */
-#define APN_TIMEOUT      (150000u) /* ms */
-#define DEACT_TIMEOUT   (40000u) /* ms */
+#define LTE_CMD_LEN        (256u)
 
 #define ON_TIMEOUT_MS    (5500u) /* ms */      // Doc BG96: wait at least 4.8s for waiting status pin outputting level
 #define OFF_TIMEOUT_MS    (3000u) /* ms */
@@ -75,6 +71,66 @@ static uint8_t Gsm_RxBuf[GSM_RXBUF_MAXSIZE];
 /****************************************************************************************
    Public functions
  ****************************************************************************************/
+ //bg96 power up
+void bg96_init()
+{
+  pinMode(bg96_RESET, OUTPUT);
+  pinMode(bg96_PWRKEY, OUTPUT);
+  pinMode(bg96_GPS_EN, OUTPUT);
+  pinMode(bg96_W_DISABLE, OUTPUT);
+  pinMode(bg96_STATUS, INPUT);
+
+  digitalWrite(bg96_RESET, 0);
+  digitalWrite(bg96_W_DISABLE, 1);
+  //digitalWrite(bg96_GPS_EN, 1);
+  digitalWrite(bg96_GPS_EN, 1);
+}
+
+//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
+eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
+{
+  char tmp[MAX_CMD_LEN] = {0};
+  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
+  int len = strlen(at);
+
+  if ((at != NULL) && (len <= MAX_CMD_LEN))
+  {
+    strncpy(tmp, at, len);
+    tmp[len] = '\r';
+    Serial1.write(tmp);
+    delay(10);
+    memset(GSM_RSP, 0, 1600);
+    l_eCode = eBG96_WaitResponse(GSM_RSP, p_u32Timeout, p_pchExpectedRsp);
+    #ifdef DEBUG
+      Serial.printf("%s\r\n", GSM_RSP);
+    #endif
+  } else {
+  #ifdef DEBUG
+    Serial.printf("AT cmd too long\r\n");
+  #endif
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+}
+
+//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
+void bg96_at(char *at)
+{
+  char tmp[256] = {0};
+  int len = strlen(at);
+  strncpy(tmp, at, len);
+  tmp[len] = '\r';
+  Serial1.write(tmp);
+  delay(10);
+  while (Serial1.available()) {
+    bg96_rsp += char(Serial1.read());
+    delay(2);
+  }
+  Serial.println(bg96_rsp);
+  bg96_rsp = "";
+}
+ 
  /**@brief      Turn on BG96.
  * @retval BG96_SUCCESS
  * @retval BG96_ERROR_TIMEOUT
@@ -188,63 +244,6 @@ eBG96ErrorCode_t eBG96_TurnOff(void)
   return l_eCode;
 }
 
-//bg96 power up
-void bg96_init()
-{
-  pinMode(bg96_RESET, OUTPUT);
-  pinMode(bg96_PWRKEY, OUTPUT);
-  pinMode(bg96_GPS_EN, OUTPUT);
-  pinMode(bg96_W_DISABLE, OUTPUT);
-  pinMode(bg96_STATUS, INPUT);
-
-  digitalWrite(bg96_RESET, 0);
-  digitalWrite(bg96_W_DISABLE, 1);
-  //digitalWrite(bg96_GPS_EN, 1);
-  digitalWrite(bg96_GPS_EN, 0);
-}
-
-//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
-void bg96_at_wait_rsp(char *at, const char * p_pchExpectedRsp)
-{
-  char tmp[MAX_CMD_LEN] = {0};
-  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
-  int len = strlen(at);
-
-  if ((at != NULL) && (len <= MAX_CMD_LEN))
-  {
-    strncpy(tmp, at, len);
-    tmp[len] = '\r';
-    Serial1.write(tmp);
-    delay(10);
-    memset(GSM_RSP, 0, 1600);
-    l_eCode = eBG96_WaitResponse(GSM_RSP, CMD_TIMEOUT, p_pchExpectedRsp);
-    #ifdef DEBUG
-      Serial.printf("%s\r\n", GSM_RSP);
-    #endif
-  } else {
-  #ifdef DEBUG
-    Serial.printf("AT cmd too long\r\n");
-  #endif
-  }
-}
-
-//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
-void bg96_at(char *at)
-{
-  char tmp[256] = {0};
-  int len = strlen(at);
-  strncpy(tmp, at, len);
-  tmp[len] = '\r';
-  Serial1.write(tmp);
-  delay(10);
-  while (Serial1.available()) {
-    bg96_rsp += char(Serial1.read());
-    delay(2);
-  }
-  Serial.println(bg96_rsp);
-  bg96_rsp = "";
-}
-
 //gps data
 eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
 {
@@ -259,7 +258,7 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
   /* send GPS command to BG96 */
   memset(GSM_RSP, 0, GSM_GENER_CMD_LEN);
   Serial1.write("AT+QGPSLOC=2\r");
-  l_eBG96Code = eBG96_WaitResponse(GSM_RSP, GSM_GENER_CMD_TIMEOUT * 4, GSM_CMD_RSP_OK_RF);
+  l_eBG96Code = eBG96_WaitResponse(GSM_RSP, CMD_TIMEOUT, GSM_CMD_RSP_OK_RF);
 
   if ((l_eBG96Code == GNSS_C_SUCCESS) && (p_psPosition != NULL))
   {
@@ -366,51 +365,28 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
 
 //network connect
 void connect(uint8_t p_u8Flag) {
-    
-  bg96_at("AT+CGATT=1");          //Connect to network
-  delay(3000);
-  bg96_at("AT+QCFG=1"); //GSM mode
-  delay(2000);
-  bg96_at_wait_rsp("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF);
+  eBG96_SetRATSearchSeq("01");  // GSM
+  eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   
-  //Serial.println("get network info...");
-  //bg96_at("AT+QNWINFO");
-  //delay(2000);
+  eBG96_SendCommand("AT+QNWINFO", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
-  //Serial.println("QIACT...");
-  bg96_at_wait_rsp("AT+QIACT=1", GSM_CMD_RSP_OK_RF);
-  //delay(2000);
-
-  //bg96_at("AT+QIACT=?");
-  //delay(2000);
+  eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
   //Serial.println("get time");
   //bg96_at("AT+QLTS=1"); //query GMT time from network
   //delay(2000);
 
-  bg96_at_wait_rsp("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF);
-  //delay(2000);
-
-  bg96_at_wait_rsp("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF);
-  //delay(2000);
-
-  //GET request
-  //bg96_at("AT+QHTTPURL=17,80");
-  //delay(3000);
-  //Serial1.write("http://google.fr/\r");
-  //delay(2000);
-  //bg96_at("AT+QHTTPGET=80");
-  //delay(2000);
+  eBG96_SendCommand("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+  eBG96_SendCommand("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
   //POST request
   bg96_at("AT+QHTTPURL=57,80"); //57 is length of the url
   delay(3000);
   //Serial1.write("https://webhook.site/b80027c3-ec69-4694-b32d-b640549c6213\r");
-  Serial1.write("https://webhook.site/fba44e81-f85f-43bd-b906-b68b57f05f42\r");
+  Serial1.write("https://webhook.site/15cc74bf-54b7-4b93-8746-c023eee63d32\r");
   delay(3000);
   bg96_at("AT+QHTTPPOST=58,80,80");//48 is length of the post data
   delay(3000);
-  //Serial1.write("{location:{position:{lat:49.12345,lon:0.12345}}}\r");
 
   if (p_u8Flag == 0u)
   {
@@ -423,15 +399,6 @@ void connect(uint8_t p_u8Flag) {
     Serial1.write("{TOR_state: {TOR1_current_state: 0,TOR2_current_state: 1}}\r");
   }
   delay(3000);
-
-  //bg96_at("AT+QHTTPREAD=80");
-  //delay(3000);
-  /*bg96_rsp="";
-    while (Serial1.available()) {
-    bg96_rsp += char(Serial1.read());
-    delay(2);
-    }
-    Serial.print(bg96_rsp); */
 }
 
 /**@brief Set Apn information
@@ -501,7 +468,7 @@ int Gsm_RxByte(void)
   return c;
 }
 
-eBG96ErrorCode_t eBG96_WaitResponse(char *rsp_value, uint16_t timeout_ms, const char * p_pchExpectedRsp)
+eBG96ErrorCode_t eBG96_WaitResponse(char *rsp_value, uint32_t timeout_ms, const char * p_pchExpectedRsp)
 {
   eBG96ErrorCode_t l_eErrCode = BG96_ERROR_PARAM;  
   int wait_len = 0;
@@ -560,7 +527,7 @@ void vBG96_GNSS_TurnOn(void)
 {
   digitalWrite(bg96_GPS_EN, HIGH);
   vTime_WaitMs(10);
-  bg96_at_wait_rsp("AT+QGPS=1", GSM_CMD_RSP_OK_RF);
+  eBG96_SendCommand("AT+QGPS=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   //bg96_at("AT+QGPS=1");
 }
 
@@ -572,9 +539,29 @@ void vBG96_GNSS_TurnOn(void)
  */
 void vBG96_GNSS_TurnOff(void)
 {
-  bg96_at_wait_rsp("AT+QGPSEND", GSM_CMD_RSP_OK_RF);
+  eBG96_SendCommand("AT+QGPSEND", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   digitalWrite(bg96_GPS_EN, LOW);
   //bg96_at("AT+QGPSEND");
+}
+
+/**@brief Set the searching sequence of RATs
+ * @param p_pchSearchSeq      numbers corresponding to searching sequence of RATs
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_SetRATSearchSeq(char * p_pchSearchSeq)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_PARAM;
+  char l_achCmd[LTE_CMD_LEN] = {0};
+
+  if (p_pchSearchSeq != NULL)
+  {
+    snprintf(l_achCmd, LTE_CMD_LEN, "AT+QCFG=\"nwscanseq\",%s,1", p_pchSearchSeq);
+    l_eCode = eBG96_SendCommand(l_achCmd, GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+  }
+
+  return l_eCode;
 }
 
 /****************************************************************************************
