@@ -11,7 +11,7 @@
 
    Date:          12/07/2021
    Author:        Martin C.
-   Description:   Main ino file-
+   Description:   Main ino file
 
 */
 
@@ -24,7 +24,10 @@
 #include <Arduino_nRF5x_lowPower.h> // LowPower Library for nRF5x
 
 #include "sensors.h"
-#include "bg96.h"
+#include "BG96.h"
+#include "BG96_LTE.h"
+#include "GNSS.h"
+#include "cellular.h"
 #include "config.h"
 #include "timeout.h"
 
@@ -115,11 +118,11 @@ void setup()
   
   //connect(0u);
 
+  eGNSS_TurnOff();
   if (eBG96_TurnOff() != BG96_SUCCESS)
   {
     eBG96_TurnOff();
   }
-  vBG96_GNSS_TurnOff();
   Serial1.end();
 }
 

@@ -22,7 +22,8 @@
 #include <Wire.h>
 #include <Arduino.h>
 
-#include "bg96.h"
+#include "BG96.h"
+#include "GNSS.h"
 #include "timeout.h"
 #include "config.h"
 
