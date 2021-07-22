@@ -56,15 +56,27 @@ static eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition);
 eGnssCodes_t eGNSS_TurnOn(void)
 {
   eGnssCodes_t l_eCode = GNSS_ERROR_FAILED;
+  uint8_t l_u8Retry = 0u;;
   
   digitalWrite(bg96_GPS_EN, HIGH);
   vTime_WaitMs(10);
   
-  if(BG96_SUCCESS == eBG96_SendCommand("AT+QGPS=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT))
+  while(l_u8Retry < 200u)
   {
-    l_eCode = GNSS_C_SUCCESS;
+    if (BG96_SUCCESS != eBG96_SendCommand("AT+QGPS=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT))
+    {
+      l_u8Retry++;
+      delay(100); 
+    }else{
+      break;
+    }
+  }
+  Serial.println(l_u8Retry);
+  if (l_u8Retry >= 200u)
+  {
+    l_eCode = GNSS_ERROR_FAILED;      
   }else{
-    l_eCode = GNSS_ERROR_FAILED;
+    l_eCode = GNSS_C_SUCCESS;
   }
 
   return l_eCode;

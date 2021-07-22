@@ -174,12 +174,12 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
+    
     eGNSS_TurnOn();
-
     eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
-    vCellular_SendData();
-
     eGNSS_TurnOff();
+    
+    vCellular_SendData();
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
