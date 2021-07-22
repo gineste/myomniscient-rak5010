@@ -45,6 +45,8 @@
 static void vUpdateTiming(void);        // update timings
 static void vStatem_ContextSetup(void); // setup context
 
+static void vCellular_PostHttp(String p_Sjson);
+
 /****************************************************************************************
    Variable declarations
  ****************************************************************************************/
@@ -181,6 +183,7 @@ void loop()
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
     vCellular_SendData();
+    //vCellular_PostHttp("string");
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
@@ -267,6 +270,92 @@ static void nrf_io3_it_cb() {
 
 static void nrf_io4_it_cb() {
     g_u32LastDebounceTimeEmpty = u32Time_getMs();
+}
+
+static void vCellular_PostHttp(String p_Sjson) {
+  #if 0
+  String payload = "";
+  String host;
+  String l_json = json;
+  String url;
+  char cmd [100];
+  String urn;
+
+  Serial.printf("JSON LEN = %d\r\n", l_json.length());
+  
+  host = "prod-31.francecentral.logic.azure.com";
+  urn = "/workflows/06e296db4bc1404f816444502827ae80/triggers/manual/paths/invoke/exotic/v1?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ZActYj_9ziMvqfhtcc4JWmjgVEdOTO8mMygYEB0I4FA";
+  url = "https://" + host + urn;
+  String ms_json = "{location:{position:{lat:49.12345,lon:0.12345}}}";
+  Serial.print(url);
+  memset(cmd, 0, 100);
+  sprintf(cmd, "AT+QHTTPURL=%d,80",url.length());
+  bg96_at(cmd);
+  delay(1000);
+  Serial1.print(url);
+  delay(3000);
+  payload = "POST " +  url +  " HTTP/1.1\r\n";
+  payload += "Host: " + host + "\r\n";
+  payload += "Accept: */*\r\n";
+  payload += "User-Agent: QUECTEL_MODULE\r\n";
+  payload += "Connection: Keep-Alive\r\n";
+  payload += "X-proxy-auth: 88kmrhn6CSt9GparhdNXE8aSRrjeDCx\r\n";
+  payload += "Content-Type: Application/json\r\n";
+  //payload += "Content-Length: 525";// + l_json.length();
+  String json_len = String(ms_json.length());
+  payload += "Content-Length: " + json_len;
+  payload += "\r\n\r\n";
+  //payload += l_json;
+  payload += ms_json;
+  Serial.println("*****PAYLOAD******");
+  Serial.println(payload);
+  uint32_t post_len = payload.length();
+  memset(cmd, 0, 100);
+  sprintf(cmd, "AT+QHTTPPOST=%d,80,80",post_len);
+  Serial.println(cmd);
+  //bg96_at(cmd);
+  eBG96_SendCommand(cmd, GSM_CONNECT_STR, CONN_TIMEOUT);  // 58 is length of json body
+  //delay(3000);
+  Serial1.print(payload);
+  #endif
+
+  String payload = "";
+String host;
+String url;
+String json;
+char cmd [100];
+String urn;
+  host = "prod-31.francecentral.logic.azure.com";
+  urn = "/workflows/06e296db4bc1404f816444502827ae80/triggers/manual/paths/invoke/exotic/v1?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ZActYj_9ziMvqfhtcc4JWmjgVEdOTO8mMygYEB0I4FA";
+  url = "https://" + host + urn;
+  json = "{location:{position:{lat:49.12345,lon:0.12345}}}";
+  Serial.print(url);
+  memset(cmd, 0, 100);
+  sprintf(cmd, "AT+QHTTPURL=%d,80",url.length());
+  bg96_at(cmd);
+  delay(1000);
+  Serial1.print(url);
+  delay(3000);
+  payload = "POST " +  url +  " HTTP/1.1\r\n";
+  payload += "Host: " + host + "\r\n";
+  payload += "Accept: */*\r\n";
+  payload += "User-Agent: QUECTEL_MODULE\r\n";
+  payload += "Connection: Keep-Alive\r\n";
+  payload += "X-proxy-auth: 88kmrhn6CSt9GparhdNXE8aSRrjeDCx\r\n";
+  payload += "Content-Type: Application/json\r\n";
+  payload += "Content-Length: " + String(json.length());
+  payload += "\r\n\r\n";
+  payload += json;
+  Serial.println("*****PAYLOAD******");
+  Serial.println(payload);
+  uint32_t post_len = payload.length();
+  memset(cmd, 0, 100);
+  sprintf(cmd, "AT+QHTTPPOST=%d,80,80",post_len);
+  Serial.println(cmd);
+  //bg96_at(cmd);
+  eBG96_SendCommand(cmd, GSM_CONNECT_STR, CONN_TIMEOUT);  // 58 is length of json body
+  Serial1.print(payload);
+  delay(3000);
 }
 /****************************************************************************************
    End Of File
