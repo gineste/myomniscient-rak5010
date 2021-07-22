@@ -33,6 +33,12 @@
 #define IP_MAX_SIZE           (16u)
 #define MAX_JSON_LEN          (1024u)
 
+typedef volatile uint32_t REG32;
+#define pREG32 (REG32 *)
+
+#define MAC_ADDRESS_HIGH  (*(pREG32 (0x100000a8)))
+#define MAC_ADDRESS_LOW   (*(pREG32 (0x100000a4)))
+
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -44,7 +50,9 @@
 /****************************************************************************************
    Variable declarations
  ****************************************************************************************/
-
+  uint32_t addr_high = ((MAC_ADDRESS_HIGH) & 0x0000ffff) | 0x0000c000;
+  uint32_t addr_low  = MAC_ADDRESS_LOW;
+  
 /****************************************************************************************
    Public functions
  ****************************************************************************************/
@@ -113,9 +121,10 @@ void vCellular_SendData(void) {
   memset(l_achJson, 0, MAX_JSON_LEN);
   //sprintf(l_achCmd, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_psSensorsData.au8TORs[0], l_psSensorsData.au8TORs[1]);
   snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
-                    "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"123213123FAZDAD\",\"lagTagUpdate\": \"123123123123123\","
+                    "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
                     "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
                     "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,\"network\": {\"RSSI\": %d}}}", 
+                    (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
                     l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
                     l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi);
                     
