@@ -54,8 +54,7 @@ static sStatemContext_t g_sStatemContext = {
 };
 
 static uint8_t g_u8SwitchEventReady = 0u;
-static uint32_t g_u32LastDebounceTimeFull = 0u;
-static uint32_t g_u32LastDebounceTimeEmpty = 0u;
+static uint32_t g_u32LastDebounceTime = 0u;
 /****************************************************************************************
    Public functions
  ****************************************************************************************/
@@ -138,8 +137,7 @@ void loop()
 #endif
   vUpdateTiming();
 
-  // trailer is full
-  if ((u32Time_getMs() - g_u32LastDebounceTimeFull) > DEBOUNCE_DELAY_MS)
+  if ((u32Time_getMs() - g_u32LastDebounceTime) > DEBOUNCE_DELAY_MS)
   {  
     l_u8State = (digitalRead(NRF_IO3) == LOW);    // pull up
     
@@ -148,11 +146,7 @@ void loop()
       g_u8SwitchEventReady = 1u;
       u8SensorMngr_TORStateSet(SENSOR_MNGR_TOR2, (digitalRead(NRF_IO3) == LOW));
     }
-  }
 
-  // trailer is empty
-  if ((u32Time_getMs() - g_u32LastDebounceTimeEmpty) > DEBOUNCE_DELAY_MS)
-  {   
     l_u8State = (digitalRead(NRF_IO4) == LOW);    // pull up
     
     if (l_u8State != u8SensorMngr_TORStateGet(SENSOR_MNGR_TOR1))
@@ -262,11 +256,11 @@ static void vStatem_ContextSetup(void)
 }
 
 static void nrf_io3_it_cb() {
-    g_u32LastDebounceTimeFull = u32Time_getMs();
+    g_u32LastDebounceTime = u32Time_getMs();
 }
 
 static void nrf_io4_it_cb() {
-    g_u32LastDebounceTimeEmpty = u32Time_getMs();
+    g_u32LastDebounceTime = u32Time_getMs();
 }
 
 /****************************************************************************************

@@ -83,15 +83,17 @@ void bg96_init()
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
 {
-  char tmp[MAX_CMD_LEN] = {0};
+ // char tmp[MAX_CMD_LEN] = {0};
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
   int len = strlen(at);
   
-  if ((at != NULL) && (len <= MAX_CMD_LEN))
+  if ((at != NULL) && (len > 0))
   {
-    strncpy(tmp, at, len);
-    tmp[len] = '\r';
-    Serial1.write(tmp);
+    //strncpy(tmp, at, len);
+    //tmp[len] = '\r';
+    //Serial1.write(tmp);
+    Serial1.write(at);
+    Serial1.write('\r');
     delay(10);
     memset(GSM_RSP, 0, 1600);
     l_eCode = eBG96_WaitResponse(GSM_RSP, p_u32Timeout, p_pchExpectedRsp);
@@ -111,15 +113,17 @@ eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eBG96ErrorCode_t eBG96_SendCommandExpected(char *at,  const char * p_pchSearchStr, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
 {
-  char tmp[MAX_CMD_LEN] = {0};
+   // char tmp[MAX_CMD_LEN] = {0};
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
   int len = strlen(at);
   
-  if ((at != NULL) && (len <= MAX_CMD_LEN))
+  if ((at != NULL) && (len > 0))
   {
-    strncpy(tmp, at, len);
-    tmp[len] = '\r';
-    Serial1.write(tmp);
+    //strncpy(tmp, at, len);
+    //tmp[len] = '\r';
+    //Serial1.write(tmp);
+    Serial1.write(at);
+    Serial1.write('\r');
     delay(10);
     memset(GSM_RSP, 0, 1600);
     l_eCode = eBG96_WaitResponse(GSM_RSP, p_u32Timeout, p_pchExpectedRsp);
@@ -580,8 +584,11 @@ eBG96ErrorCode_t eBG96_GetNetwork(eNetworkMode_t *p_eNetworkMode, char * p_pchNe
         l_pchOperatorNameStart = strstr(GSM_RSP, "\"") + 1; /* skip " */
         l_pchOperatorNameEnd = strstr(l_pchOperatorNameStart, "\"");
 
-        memset(p_pchNetworkName, 0, MAX_OPERATOR_NAME_LEN);
-        strncpy(p_pchNetworkName, l_pchOperatorNameStart, l_pchOperatorNameEnd - l_pchOperatorNameStart);
+        if ((l_pchOperatorNameEnd != NULL) && (l_pchOperatorNameStart != NULL))
+        {
+          memset(p_pchNetworkName, 0, MAX_OPERATOR_NAME_LEN);
+          strncpy(p_pchNetworkName, l_pchOperatorNameStart, l_pchOperatorNameEnd - l_pchOperatorNameStart); 
+        }
 
         *p_peNetworkTech = (eNetworkTech_t) *(l_pchOperatorNameEnd+2);
       }else{

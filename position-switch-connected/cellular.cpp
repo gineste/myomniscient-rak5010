@@ -87,7 +87,10 @@ void vCellular_SendData(void) {
 
   s_SensorMngrData_t * l_psSensorsData = psSensorMngr_GetSensorData();
   
-  eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT);
+  if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT))
+  {
+    while(BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT));
+  }
   
   //eBG96_SendCommand("AT+QCFG=\"nwscanseq\",01,1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   //eBG96_SetRATSearchSeq("01");  // GSM
@@ -149,6 +152,8 @@ void vCellular_SendData(void) {
                     l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
 
   vCellular_PostHttp(String(l_achJson));
+
+  eBG96_SendCommand("AT+CGATT=0", GSM_CMD_RSP_OK_RF, DEACT_TIMEOUT); 
   
   l_u16FrameCnt++;
 }
@@ -168,8 +173,9 @@ static void vCellular_PostHttp(String json) {
   // configure URL
   memset(l_achCmd, 0, MAX_CMD_LEN);
   sprintf(l_achCmd, "AT+QHTTPURL=%d,80",url.length());
-  bg96_at(l_achCmd);
-  delay(1000);
+  //bg96_at(l_achCmd);
+  //delay(1000);
+  eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CMD_TIMEOUT);
   eBG96_SendCommand((char *)(url.c_str()), GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
   // build full payload
@@ -188,8 +194,10 @@ static void vCellular_PostHttp(String json) {
   l_u16PostLen = payload.length();
   memset(l_achCmd, 0, MAX_CMD_LEN);
   sprintf(l_achCmd, "AT+QHTTPPOST=%d,80,80",l_u16PostLen);
-  eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT);
-  eBG96_SendCommand((char *)(payload.c_str()), GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);
+  if(BG96_SUCCESS == eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT))
+  {
+    eBG96_SendCommand((char *)(payload.c_str()), GSM_CMD_RSP_OK_RF, CONN_TIMEOUT); 
+  }
 }
 
 
