@@ -89,6 +89,9 @@ uint8_t u8SensorMngr_TORStateGet(uint8_t p_u8TORIndex)
  */
 uint8_t u8SensorMngr_TORStateSet(uint8_t p_u8TORIndex, uint8_t p_u8State)
 {
+  // First save current state in previous
+  g_sSensorsData.au8TORsPrevious[p_u8TORIndex] = g_sSensorsData.au8TORs[p_u8TORIndex];
+  // Then set state
   g_sSensorsData.au8TORs[p_u8TORIndex] = p_u8State;
 }
 

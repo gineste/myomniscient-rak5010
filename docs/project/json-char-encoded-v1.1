@@ -1,4 +1,36 @@
 const payload = {
+  location: {
+    accuracy: 10, // précision du signal de position en mètre
+    altitude: 30, // altitude en mètre
+    accuracyType: "High", // type de précision ("High" si inférieur à 10 000 mètres sinon "LOW")
+    position: {
+      lat: 49.1235111233,
+      lon: 0.12321414141,
+    },
+    lastPositionUpdate: "12332141244"", // dernier update de position en timestamp unix
+  },
+  manufacturer: "Rak", // le nom de désignation du fournisseur, idéalement en 1 mot
+  manufacturerId: "123213123FAZDAD", // l'id fournisseur du tag qui doit être le même que sur l'étiquette collée dessus
+  lagTagUpdate: "123123123123123", // la dernière date d'émission du tag en timestamp unix
+  technology: "GPS", // le nom du moyen technologique utiliser pour géolocaliser la dernière position
+  metadataTag: { // la donnée "Brute" du tag
+    TOR_state: {
+      TOR1_current_state: 1,
+      TOR1_previous_state: 0,
+      TOR2_current_state: 0,
+      TOR2_previous_state: 1
+    },
+    messageType: "POSITION_MESSAGE", // le type du message
+    sequenceCounter: 2, // le compteur de séquence d'émission du capteur incrémenté à chaque message
+    eventType:"1", // si message de type EVENT, le type de l'event quand il y en a plusieurs
+    profile : {}, // le profil de réglage du capteur, contient les attributs que l'on aura paramétré
+    voltage_ext: 3.1,
+    voltage_int: 3,
+    network: {} // les informations réseaux utiles tel que l'opération, l'id de l'antenne, le RSSI... à déterminer ensemble dans un second temps
+  }
+}
+
+const payload = {
   \"location\": {
     \"accuracy\": 10,
     \"altitude\": 30,

@@ -33,7 +33,7 @@
 /****************************************************************************************
    Defines
  ****************************************************************************************/
-#define DEBOUNCE_DELAY_MS  (200)
+#define DEBOUNCE_DELAY_MS  (100)
 
 /****************************************************************************************
    Private type declarations
@@ -76,12 +76,11 @@ void setup()
   pinMode(LED_GREEN_PIN, OUTPUT);
   pinMode(NRF_IO3, INPUT_PULLUP);
   pinMode(NRF_IO4, INPUT_PULLUP);
-  
-  delay(10);
-  digitalWrite(LED_GREEN_PIN, LOW);
-  
+
   attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
   attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
+  
+  digitalWrite(LED_GREEN_PIN, LOW);
   
   vStatem_ContextSetup();
 
@@ -101,7 +100,7 @@ void setup()
 #if (SEND_STATUS_AT_BOOT == 1u)
   #ifdef DEBUG
   Serial.printf("Send status at boot..\r\n");
-  delay(500);
+  delay(100);
   #endif
   
   Serial1.begin(SERIAL_BAUDRATE);
@@ -110,12 +109,20 @@ void setup()
   
   eBG96_TurnOn();
   vCellular_SendData();
-  
+#endif
+
   if (eBG96_TurnOff() != BG96_SUCCESS)
   {
     eBG96_TurnOff();
   }
-  Serial1.end();
+
+#if (SEND_STATUS_AT_BOOT == 1u)
+  // TODO : test power cons after that condition
+  #ifdef DEBUG
+    Serial.printf("Serial 1 end\r\n");
+    delay(100);
+  #endif
+    Serial1.end();
 #endif
 }
 
@@ -138,10 +145,10 @@ void loop()
   {  
     l_u8State = (digitalRead(NRF_IO3) == LOW);    // pull up
     
-    if (l_u8State != u8SensorMngr_TORStateGet(0))
+    if (l_u8State != u8SensorMngr_TORStateGet(SENSOR_MNGR_TOR2))
     {
       g_u8SwitchEventReady = 1u;
-      u8SensorMngr_TORStateSet(0, (digitalRead(NRF_IO3) == LOW));
+      u8SensorMngr_TORStateSet(SENSOR_MNGR_TOR2, (digitalRead(NRF_IO3) == LOW));
     }
   }
 
@@ -150,10 +157,10 @@ void loop()
   {   
     l_u8State = (digitalRead(NRF_IO4) == LOW);    // pull up
     
-    if (l_u8State != u8SensorMngr_TORStateGet(1))
+    if (l_u8State != u8SensorMngr_TORStateGet(SENSOR_MNGR_TOR1))
     {
       g_u8SwitchEventReady = 1u;
-      u8SensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
+      u8SensorMngr_TORStateSet(SENSOR_MNGR_TOR1, (digitalRead(NRF_IO4) == LOW));
     }
   }
 

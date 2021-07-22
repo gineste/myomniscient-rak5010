@@ -34,6 +34,11 @@ typedef enum _SENSOR_MNGR_ERROR_ {
   SENSOR_MNGR_ERROR
 } e_SensorMngr_ErrorCode_t;
 
+typedef enum _SENSOR_MNGR_TORS_ {
+  SENSOR_MNGR_TOR2,
+  SENSOR_MNGR_TOR1
+} e_SensorMngr_TORs_t;
+
 typedef struct _GNSS_POSITION_ {
    uint8_t u8Hours;
    uint8_t u8Minutes;
@@ -59,8 +64,9 @@ typedef struct _GNSS_POSITION_ {
 } sPosition_t;
 
 typedef struct __attribute__ ((__packed__)) _SENSOR_MNGR_DATA_  {
-   uint8_t      au8TORs[TOR_NUMBER]; /* switch 0 : full ; switch 1 : empty */
-   sPosition_t  sPosition;            /* Last gps position */
+   uint8_t      au8TORs[TOR_NUMBER];          /* switch 0 : full ; switch 1 : empty */
+   uint8_t      au8TORsPrevious[TOR_NUMBER];  /* previous TORs position */
+   sPosition_t  sPosition;                    /* Last gps position */
 }s_SensorMngrData_t;
 
 /****************************************************************************************

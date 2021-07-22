@@ -49,13 +49,15 @@
    Public functions
  ****************************************************************************************/
 void vCellular_SendData(void) {
-  char l_achCmd[MAX_JSON_LEN] = {0};
+  char l_achCmd[MAX_CMD_LEN] = {0};
+  char l_achJson[MAX_JSON_LEN] = {0};
+  
   eBG96ErrorCode_t l_eBg96Code = BG96_SUCCESS;
   eNetCtxStat_t l_eCtxState = NET_CTX_DEACTIVATE;
   char l_achIp[IP_MAX_SIZE] = {0};
   static uint16_t l_u16FrameCnt = 0u;
 
-  s_SensorMngrData_t l_sSensorsData = *(psSensorMngr_GetSensorData());
+  s_SensorMngrData_t * l_psSensorsData = psSensorMngr_GetSensorData();
 
   eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT);
   
@@ -91,22 +93,20 @@ void vCellular_SendData(void) {
   //eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT);
   //eBG96_SendCommand(SERVER_URL, GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);
 
-  memset(l_achCmd, 0, MAX_JSON_LEN);
-  sprintf(l_achCmd, "AT+QHTTPPOST=%d,80,80", 517);
+
+  memset(l_achJson, 0, MAX_JSON_LEN);
+  //sprintf(l_achCmd, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_psSensorsData.au8TORs[0], l_psSensorsData.au8TORs[1]);
+  sprintf(l_achJson, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
+                    "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"123213123FAZDAD\",\"lagTagUpdate\": \"123123123123123\","
+                    "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
+                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,\"network\": {}}}", 
+                    l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt);
+                    
+  memset(l_achCmd, 0, MAX_CMD_LEN);
+  sprintf(l_achCmd, "AT+QHTTPPOST=%d,80,80", strlen(l_achJson));
   eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT);  // 58 is length of json body
   
-  memset(l_achCmd, 0, MAX_JSON_LEN);
-  //sprintf(l_achCmd, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_sSensorsData.au8TORs[0], l_sSensorsData.au8TORs[1]);
-  sprintf(l_achCmd, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
-                    "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"123213123FAZDAD\",\"lagTagUpdate\": \"123123123123123\","
-                    "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": 1,\"TOR1_previous_state\": 0,\"TOR2_current_state\": 0,\"TOR2_previous_state\": 1},"
-                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": 2,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,\"network\": {}}}", 
-                    l_sSensorsData.au8TORs[0], l_sSensorsData.au8TORs[1]);
-
-  Serial.printf("%s\r\n", l_achCmd);
-  Serial.printf("len = %d\r\n", strlen(l_achCmd));
-  
-  eBG96_SendCommand(l_achCmd, GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);
+  eBG96_SendCommand(l_achJson, GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);
 
   l_u16FrameCnt++;
 }
