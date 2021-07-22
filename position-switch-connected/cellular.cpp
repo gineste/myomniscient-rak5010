@@ -57,8 +57,8 @@ static void vCellular_PostHttp(String json);
 /****************************************************************************************
    Variable declarations
  ****************************************************************************************/
-  uint32_t addr_high = ((MAC_ADDRESS_HIGH) & 0x0000ffff) | 0x0000c000;
-  uint32_t addr_low  = MAC_ADDRESS_LOW;
+uint32_t addr_high = ((MAC_ADDRESS_HIGH) & 0x0000ffff) | 0x0000c000;
+uint32_t addr_low  = MAC_ADDRESS_LOW;
 
 static eNetworkTech_t g_eNetworkTech = NET_TECH_GSM;
 static eCellularBand_t g_eBandTech = CELLULAR_BAND_LTE;
@@ -79,6 +79,7 @@ void vCellular_SendData(void) {
   eNetCtxStat_t l_eCtxState = NET_CTX_DEACTIVATE;
   char l_achIp[IP_MAX_SIZE] = {0};
   static uint16_t l_u16FrameCnt = 0u;
+  uint8_t l_u8Retry = 0u;
   
   sSptkNetInfo_t l_sNetInfo = {0};      /* Status msg network info */
   eNetworkStat_t l_eNetworkState = NET_STAT_DETACHED;
@@ -89,7 +90,16 @@ void vCellular_SendData(void) {
   
   if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT))
   {
-    while(BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT));
+    while(l_u8Retry < 200u)
+    {
+      if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT))
+      {
+        l_u8Retry++;
+        delay(100); 
+      }else{
+        break;
+      }
+    }
   }
   
   //eBG96_SendCommand("AT+QCFG=\"nwscanseq\",01,1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
@@ -97,17 +107,8 @@ void vCellular_SendData(void) {
   eBG96_SendCommand("AT+QCFG=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT); // needed otherwise QIACT stuck...
   
   eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  //eBG96_SendCommand("AT+QICSGP=1,1,\"sl2sfr\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  
-  //eBG96_SendCommand("AT+QNWINFO", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
   eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT); 
-//  bg96_at("AT+QIACT=1");
-  //delay(2000);
-
-  //Serial.println("get time");
-  //bg96_at("AT+QLTS=1"); //query GMT time from network
-  //delay(2000);
 
   eBG96_SendCommand("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   eBG96_SendCommand("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
@@ -139,8 +140,7 @@ void vCellular_SendData(void) {
     Serial.printf("RSSI is %d dBm\r\n", l_sNetInfo.s16Rssi);
   #endif
   }
-
-
+  
   memset(l_achJson, 0, MAX_JSON_LEN);
   snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
                     "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
@@ -150,15 +150,6 @@ void vCellular_SendData(void) {
                     (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
                     l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
                   l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
-  
-  /*snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
-                  "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
-                  "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
-                  "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,"
-                  "\"network\": {\"RSSI\": %d}}}",
-                  (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
-                  l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
-                  l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi);*/
 
   vCellular_PostHttp(String(l_achJson));
 
