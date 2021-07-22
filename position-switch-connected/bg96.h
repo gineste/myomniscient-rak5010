@@ -28,9 +28,9 @@
 #define bg96_GPS_EN     39
 #define bg96_STATUS     31
 
-#define  GSM_RXBUF_MAXSIZE           1600
+#define  GSM_RXBUF_MAXSIZE            1600
 #define  GSM_GENER_CMD_LEN           (128)
-#define  MAX_CMD_LEN                 (256u)
+#define  MAX_CMD_LEN                 (1024u)
 
 #define RDY_TIMEOUT       (10000u) /* ms */
 #define CMD_TIMEOUT       (3000u) /* ms */

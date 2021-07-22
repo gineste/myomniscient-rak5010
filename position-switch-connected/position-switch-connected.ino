@@ -98,13 +98,19 @@ void setup()
   delay(250);
 
   // send status at boot and turn off
-#ifdef SEND_STATUS_AT_BOOT
+#if (SEND_STATUS_AT_BOOT == 1u)
+  #ifdef DEBUG
+  Serial.printf("Send status at boot..\r\n");
+  delay(500);
+  #endif
+  
   Serial1.begin(SERIAL_BAUDRATE);
   while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
   delay(5000);                    // necessary for BG96 boot on ext battery
   
   eBG96_TurnOn();
   vCellular_SendData();
+  
   if (eBG96_TurnOff() != BG96_SUCCESS)
   {
     eBG96_TurnOff();

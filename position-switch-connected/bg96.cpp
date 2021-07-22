@@ -76,7 +76,7 @@ void bg96_init()
   digitalWrite(bg96_RESET, 0);
   digitalWrite(bg96_W_DISABLE, 1);
   //digitalWrite(bg96_GPS_EN, 1);
-  digitalWrite(bg96_GPS_EN, 1);
+  digitalWrite(bg96_GPS_EN, 0);
 }
 
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")

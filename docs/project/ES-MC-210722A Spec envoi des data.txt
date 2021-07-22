@@ -1,0 +1,20 @@
+ 
+Bonjour,
+ 
+On a mis en place la solution pour router le traffic des payloads.
+Un endpoint a été créé sur Microsoft Power automate pour plus de sécurité.
+ 
+Vous pouvez envoyer le traffic en POST sur :
+https://prod-31.francecentral.logic.azure.com/workflows/06e296db4bc1404f816444502827ae80/triggers/manual/paths/invoke/exotic/v1?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ZActYj_9ziMvqfhtcc4JWmjgVEdOTO8mMygYEB0I4FA
+ 
+Il vous faudra rajouter le header : 
+"X-proxy-auth"
+ 
+Avec la clé : 
+"88kmrhn6CSt9GparhdNXE8aSRrjeDCx"
+ 
+Le trafic sera ensuite routé via une fonction lambda sur tous les environnements dont nous avons besoin sans exposer nos clés d'api.
+J'ai ajouté une redirection du proxy vers le endpoint :
+https://webhook.site/#!/47fe4bd2-628c-4b07-b43c-4389605fe537
+ 
+Ainsi vous pouvez tester si votre implémentation marche en autonomie car vous verrez les messages atterrir ici (pas besoin de login).
