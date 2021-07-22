@@ -71,7 +71,7 @@ eGnssCodes_t eGNSS_TurnOn(void)
       break;
     }
   }
-  Serial.println(l_u8Retry);
+  
   if (l_u8Retry >= 200u)
   {
     l_eCode = GNSS_ERROR_FAILED;      
