@@ -149,7 +149,16 @@ void vCellular_SendData(void) {
                     "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
                     (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
                     l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
-                    l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
+                  l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
+  
+  /*snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
+                  "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
+                  "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
+                  "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,"
+                  "\"network\": {\"RSSI\": %d}}}",
+                  (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
+                  l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
+                  l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi);*/
 
   vCellular_PostHttp(String(l_achJson));
 
@@ -190,13 +199,19 @@ static void vCellular_PostHttp(String json) {
   payload += "\r\n\r\n";
   payload += json;
 
+#ifdef DEBUG
+  Serial.print("Payload : "); Serial.println(payload);
+#endif
+
   // post http with payload
   l_u16PostLen = payload.length();
   memset(l_achCmd, 0, MAX_CMD_LEN);
   sprintf(l_achCmd, "AT+QHTTPPOST=%d,80,80",l_u16PostLen);
   if(BG96_SUCCESS == eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT))
   {
-    eBG96_SendCommand((char *)(payload.c_str()), GSM_CMD_RSP_OK_RF, CONN_TIMEOUT); 
+    //eBG96_SendCommand((char *)(payload.c_str()), GSM_CMD_RSP_OK_RF, CONN_TIMEOUT); 
+    Serial1.print(payload);
+    delay(3000);
   }
 }
 
