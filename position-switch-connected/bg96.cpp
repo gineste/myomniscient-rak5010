@@ -83,15 +83,11 @@ void bg96_init()
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
 {
- // char tmp[MAX_CMD_LEN] = {0};
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
   int len = strlen(at);
   
   if ((at != NULL) && (len > 0))
   {
-    //strncpy(tmp, at, len);
-    //tmp[len] = '\r';
-    //Serial1.write(tmp);
     Serial1.write(at);
     Serial1.write('\r');
     delay(10);
@@ -113,15 +109,11 @@ eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eBG96ErrorCode_t eBG96_SendCommandExpected(char *at,  const char * p_pchSearchStr, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
 {
-   // char tmp[MAX_CMD_LEN] = {0};
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
   int len = strlen(at);
   
   if ((at != NULL) && (len > 0))
   {
-    //strncpy(tmp, at, len);
-    //tmp[len] = '\r';
-    //Serial1.write(tmp);
     Serial1.write(at);
     Serial1.write('\r');
     delay(10);

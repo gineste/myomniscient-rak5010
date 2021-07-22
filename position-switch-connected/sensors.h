@@ -85,18 +85,17 @@ uint8_t u8SensorMngr_TORStateGet(uint8_t p_u8TORIndex);
 
  /**@brief   Function to set TOR state.
  */
-uint8_t u8SensorMngr_TORStateSet(uint8_t p_u8TORIndex, uint8_t p_u8State);
+void vSensorMngr_TORStateSet(uint8_t p_u8TORIndex, uint8_t p_u8State);
 
 /**@brief   Function to update switch position values
  * @return  Error code.
  */
 e_SensorMngr_ErrorCode_t eSensorMngr_UpdateSwitch(void);
 
-/**@brief   Function to perform a gps position.
- * @param p_u32TimeoutInSeconds Desired timeout for position acquisition
- * @param p_eGpsState      @see e_SensorMngr_GpsMode_t
- * @return  Error code.
+/**@brief   Function to set gps position.
+ * @param   p_sPosition : GPS position
+ * @return  None
  */
-e_SensorMngr_ErrorCode_t eSensorMngr_UpdatePosition(uint32_t p_u32TimeoutInSeconds);
+void vSensorMngr_PositionSet(sPosition_t p_sPosition);
 
 #endif /* SENSORS_H_ */

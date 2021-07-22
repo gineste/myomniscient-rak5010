@@ -16,7 +16,6 @@
 /****************************************************************************************
  * Include Files
  ****************************************************************************************/
-#include "sensors.h"
 
 /****************************************************************************************
  * Defines
@@ -38,6 +37,6 @@ typedef enum _GNSS_CODES_ {
  ****************************************************************************************/
  eGnssCodes_t eGNSS_TurnOn(void);
  eGnssCodes_t eGNSS_TurnOff(void);
- eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition) ;
+ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds);
 
 #endif /* GNSS_H_ */

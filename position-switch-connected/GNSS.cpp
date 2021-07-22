@@ -22,6 +22,8 @@
 
 #include "BG96.h"
 #include "timeout.h"
+#include "sensors.h"
+#include "config.h"
 
 #include "GNSS.h"
 
@@ -36,11 +38,11 @@
 /****************************************************************************************
    Private function declarations
  ****************************************************************************************/
+static eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition);
 
 /****************************************************************************************
    Variable declarations
  ****************************************************************************************/
-char GNSS_RSP[1600] = {0};
 
 /****************************************************************************************
    Public functions
@@ -89,10 +91,78 @@ eGnssCodes_t eGNSS_TurnOff(void)
   return l_eCode;
 }
 
-eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
+/**@brief   Function to perform a gps position.
+ * @param p_u32TimeoutInSeconds Desired timeout for position acquisition
+ * @return  Error code.
+ */
+eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
+{
+  eGnssCodes_t l_eGNSSCode = GNSS_ERROR_FAILED;
+  uint32_t l_u32TimeStart = u32Time_getMs();
+  uint32_t l_u32TimeOut = 0u;
+  sPosition_t l_sPosition = {0};
+
+  if(p_u32TimeoutInSeconds > TIME_TO_FIX_MAX)
+  {
+    l_u32TimeOut = u32Time_getMs() + SECOND_TO_MS(TIME_TO_FIX_MAX);
+  }else{
+    l_u32TimeOut = u32Time_getMs() + SECOND_TO_MS(p_u32TimeoutInSeconds);
+  }
+
+  /* Save current Time at start */
+  l_u32TimeStart = u32Time_getMs();
+
+  /* Wait for a valid GPS position */
+  while((l_eGNSSCode != GNSS_ERROR_TIMEOUT) &&
+      ((l_sPosition.f32Hdop <= 0.0f) || (l_sPosition.f32Hdop > 4.0f)) &&
+      (u32Time_getMs() < l_u32TimeOut))
+  {
+    /* Request for a position */
+    l_eGNSSCode = eGNSS_GetPosition(&l_sPosition);
+   #ifdef DEBUG
+    Serial.printf("[%u] Wait Position [%u s]? %s\r\n",
+             (unsigned int)u32Time_getMs(),
+             (unsigned int) MS_TO_SECOND(l_u32TimeOut - (unsigned int)u32Time_getMs()),
+             ((l_eGNSSCode == GNSS_C_SUCCESS) ? "FIX" : "NO_POSITION"));
+   #endif
+
+    /* Retry each second, less is not necessary */
+    vTime_WaitMs(1000);
+
+    /* Check if HDOP is acceptable, or the fix timeout is reached */
+
+  };
+
+  /* calculate time to fix */
+  l_sPosition.u8TimeToFix = (u32Time_getMs() - l_u32TimeStart) / 1000u;
+#ifdef DEBUG
+  Serial.printf("[%u] GNSSFIX (%u ms)\r\n", (unsigned int)u32Time_getMs(), (unsigned int)(u32Time_getMs() - l_u32TimeStart));
+#endif
+
+  /* If fix gps failed then set default values */
+  if(l_sPosition.f32Hdop == 0.0f)
+  {
+    l_sPosition.u8Day = 1u;
+    l_sPosition.u8Month = 1u;
+    l_sPosition.u8Year = 20u;
+  }
+
+  /* Copy Position in global variable */
+  vSensorMngr_PositionSet(l_sPosition);
+
+  return l_eGNSSCode;
+}
+/****************************************************************************************
+   Private functions
+ ****************************************************************************************/
+
+ static eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
 {
   eBG96ErrorCode_t l_eBG96Code = BG96_SUCCESS;
   eGnssCodes_t l_eCode = GNSS_C_SUCCESS;
+
+  char l_achGNSS_RSP[MAX_CMD_LEN] = {0};
+  
   int32_t l_s32scanResult = -1;
   int32_t l_s32Time = 0;
   int32_t l_s32DecimalTime = 0;
@@ -100,9 +170,9 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
   char l_sLatitude[15u], l_sLongitude[15u], l_sHdop[5u], l_sAltitude[10u], l_sCourseOverGround[10u], l_sSpeedKph[10u], l_sSpeedKnots[10u] = {0};
   
   /* send GPS command to BG96 */
-  memset(GNSS_RSP, 0, GSM_GENER_CMD_LEN);
+  memset(l_achGNSS_RSP, 0, MAX_CMD_LEN);
   Serial1.write("AT+QGPSLOC=2\r");
-  l_eBG96Code = eBG96_WaitResponse(GNSS_RSP, CMD_TIMEOUT, GSM_CMD_RSP_OK_RF);
+  l_eBG96Code = eBG96_WaitResponse(l_achGNSS_RSP, CMD_TIMEOUT, GSM_CMD_RSP_OK_RF);
 
   if ((l_eBG96Code == GNSS_C_SUCCESS) && (p_psPosition != NULL))
   {
@@ -116,7 +186,7 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
       memset(l_sSpeedKnots, 0, 10);
 
       /* parse response */
-      l_s32scanResult  = sscanf(strstr(GNSS_RSP, "+QGPSLOC:"), "+QGPSLOC: %d.%d,%[0-9.],%[0-9.],%[0-9.],%[0-9.],%c,%[0-9.],%[0-9.],%[0-9.],%d,%hu",
+      l_s32scanResult  = sscanf(strstr(l_achGNSS_RSP, "+QGPSLOC:"), "+QGPSLOC: %d.%d,%[0-9.],%[0-9.],%[0-9.],%[0-9.],%c,%[0-9.],%[0-9.],%[0-9.],%d,%hu",
                             (int*) & (l_s32Time),
                             (int*) & (l_s32DecimalTime),
                             l_sLatitude,
@@ -206,9 +276,6 @@ eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition)
 
   return l_eCode;
 }
-/****************************************************************************************
-   Private functions
- ****************************************************************************************/
 
 /****************************************************************************************
    End Of File

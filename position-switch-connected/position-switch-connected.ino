@@ -88,8 +88,8 @@ void setup()
   vStatem_ContextSetup();
 
   vSensorMngr_Init();
-  u8SensorMngr_TORStateSet(0, (digitalRead(NRF_IO3) == LOW));
-  u8SensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
+  vSensorMngr_TORStateSet(0, (digitalRead(NRF_IO3) == LOW));
+  vSensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
 
   bg96_init();
 
@@ -144,7 +144,7 @@ void loop()
     if (l_u8State != u8SensorMngr_TORStateGet(SENSOR_MNGR_TOR2))
     {
       g_u8SwitchEventReady = 1u;
-      u8SensorMngr_TORStateSet(SENSOR_MNGR_TOR2, (digitalRead(NRF_IO3) == LOW));
+      vSensorMngr_TORStateSet(SENSOR_MNGR_TOR2, (digitalRead(NRF_IO3) == LOW));
     }
 
     l_u8State = (digitalRead(NRF_IO4) == LOW);    // pull up
@@ -152,7 +152,7 @@ void loop()
     if (l_u8State != u8SensorMngr_TORStateGet(SENSOR_MNGR_TOR1))
     {
       g_u8SwitchEventReady = 1u;
-      u8SensorMngr_TORStateSet(SENSOR_MNGR_TOR1, (digitalRead(NRF_IO4) == LOW));
+      vSensorMngr_TORStateSet(SENSOR_MNGR_TOR1, (digitalRead(NRF_IO4) == LOW));
     }
   }
 
@@ -174,7 +174,12 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
+    eGNSS_TurnOn();
+
+    eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
     vCellular_SendData();
+
+    eGNSS_TurnOff();
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
