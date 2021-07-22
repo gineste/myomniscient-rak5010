@@ -108,6 +108,41 @@ eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint
 }
 
 //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
+eBG96ErrorCode_t eBG96_SendCommandExpected(char *at,  const char * p_pchSearchStr, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
+{
+  char tmp[MAX_CMD_LEN] = {0};
+  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
+  int len = strlen(at);
+  
+  if ((at != NULL) && (len <= MAX_CMD_LEN))
+  {
+    strncpy(tmp, at, len);
+    tmp[len] = '\r';
+    Serial1.write(tmp);
+    delay(10);
+    memset(GSM_RSP, 0, 1600);
+    l_eCode = eBG96_WaitResponse(GSM_RSP, p_u32Timeout, p_pchExpectedRsp);
+    if(BG96_SUCCESS == l_eCode)
+    {
+    #ifdef DEBUG
+      Serial.printf("Update response\r\n");
+    #endif
+      l_eCode = eBG96_UpdateResponseStr(p_pchSearchStr);
+    }
+    #ifdef DEBUG
+      Serial.printf("%s\r\n", GSM_RSP);
+    #endif
+  } else {
+  #ifdef DEBUG
+    Serial.printf("AT cmd too long\r\n");
+  #endif
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+}
+
+//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 void bg96_at(char *at)
 {
   char tmp[256] = {0};
@@ -122,6 +157,32 @@ void bg96_at(char *at)
   }
   Serial.println(bg96_rsp);
   bg96_rsp = "";
+}
+
+eBG96ErrorCode_t eBG96_UpdateResponseStr(const char * p_pchSearchStr)
+{
+  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
+  char * l_pchRespPtr = NULL;
+
+  if(p_pchSearchStr != NULL)
+  {
+    /* Search for interesting data */
+    l_pchRespPtr = strstr(GSM_RSP, p_pchSearchStr);
+    if(l_pchRespPtr != NULL)
+    {
+      /* Copy response */
+      strcpy(GSM_RSP, l_pchRespPtr);
+      l_eCode = BG96_SUCCESS;
+    }else{
+      /* Response not found, error ! */
+      l_eCode = BG96_ERROR_FAILED;
+    }
+  }else{
+    /* No Change */
+    l_eCode = BG96_SUCCESS;
+  }
+
+  return l_eCode;
 }
  
  /**@brief      Turn on BG96.
@@ -404,6 +465,41 @@ eBG96ErrorCode_t eBG96_SetRATSearchSeq(char * p_pchSearchSeq)
   {
     snprintf(l_achCmd, LTE_CMD_LEN, "AT+QCFG=\"nwscanseq\",%s,1", p_pchSearchSeq);
     l_eCode = eBG96_SendCommand(l_achCmd, GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+  }
+
+  return l_eCode;
+}
+
+/**@brief Get the received signal strengh (rssi) in dBm
+ * Rssi = 99 if not known or not detectable
+ * @param p_ps16Rssi : BG96 RSSI response
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_GetRSSI(int16_t * p_ps16Rssi)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_PARAM;
+  unsigned int l_uiDumb_number = 0;
+  unsigned int l_uiRssi = 0;
+
+  if (p_ps16Rssi != NULL)
+  {
+    //l_eCode = eBG96_SendCommand("AT+CSQ", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+    l_eCode = eBG96_SendCommandExpected("AT+CSQ", "+CSQ:", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+    if(BG96_SUCCESS == l_eCode)
+    {
+      if(0 < sscanf(GSM_RSP, "+CSQ: %u,%u\r\n", &l_uiRssi,&l_uiDumb_number))
+      {
+        l_eCode = BG96_SUCCESS;
+        if(l_uiRssi != 99)
+        {
+          *p_ps16Rssi = (int16_t) ((2 * l_uiRssi) - 113);
+        }
+      }else{
+        l_eCode = BG96_ERROR_FAILED;
+      }
+    }
   }
 
   return l_eCode;

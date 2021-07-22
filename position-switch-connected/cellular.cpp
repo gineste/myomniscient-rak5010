@@ -56,9 +56,10 @@ void vCellular_SendData(void) {
   eNetCtxStat_t l_eCtxState = NET_CTX_DEACTIVATE;
   char l_achIp[IP_MAX_SIZE] = {0};
   static uint16_t l_u16FrameCnt = 0u;
+  sSptkNetInfo_t l_sNetInfo = {0};      /* Status msg network info */
 
   s_SensorMngrData_t * l_psSensorsData = psSensorMngr_GetSensorData();
-
+  
   eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT);
   
   //eBG96_SendCommand("AT+QCFG=\"nwscanseq\",01,1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
@@ -93,17 +94,33 @@ void vCellular_SendData(void) {
   //eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT);
   //eBG96_SendCommand(SERVER_URL, GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);
 
+  /* Get network information */
+  /*l_sNetInfo.f32Rate = f32Cellular_GetRegisterRatio();
+  l_sNetInfo.pchOperator = pchCellular_GetLastOperatorName();
+  l_sNetInfo.pchNetTech = pchCellular_GetLastNetworkTech();
+  l_sNetInfo.pchBandTech = pchCellular_GetLastBandTech();*/
+  
+  /* Get received signal strength */
+  l_eBg96Code = eBG96_GetRSSI(&(l_sNetInfo.s16Rssi));
+  if(BG96_SUCCESS == l_eBg96Code)
+  {
+  #ifdef DEBUG
+    Serial.printf("RSSI is %d dBm\r\n", l_sNetInfo.s16Rssi);
+  #endif
+  }
+
 
   memset(l_achJson, 0, MAX_JSON_LEN);
   //sprintf(l_achCmd, "{TOR_state: {TOR1_current_state: %d,TOR2_current_state: %d}}\r", l_psSensorsData.au8TORs[0], l_psSensorsData.au8TORs[1]);
-  sprintf(l_achJson, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
+  snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
                     "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"123213123FAZDAD\",\"lagTagUpdate\": \"123123123123123\","
                     "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
-                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,\"network\": {}}}", 
-                    l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt);
+                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,\"network\": {\"RSSI\": %d}}}", 
+                    l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
+                    l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi);
                     
   memset(l_achCmd, 0, MAX_CMD_LEN);
-  sprintf(l_achCmd, "AT+QHTTPPOST=%d,80,80", strlen(l_achJson));
+  snprintf(l_achCmd, MAX_CMD_LEN, "AT+QHTTPPOST=%d,80,80", strlen(l_achJson));
   eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT);  // 58 is length of json body
   
   eBG96_SendCommand(l_achJson, GSM_CMD_RSP_OK_RF, CONN_TIMEOUT);

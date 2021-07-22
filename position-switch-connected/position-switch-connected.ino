@@ -80,7 +80,11 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
   attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
   
+  // blink led once
+  digitalWrite(LED_GREEN_PIN, HIGH);
+  delay(250);
   digitalWrite(LED_GREEN_PIN, LOW);
+  delay(250);
   
   vStatem_ContextSetup();
 
@@ -89,12 +93,6 @@ void setup()
   u8SensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
 
   bg96_init();
-
-  // blink led once
-  digitalWrite(LED_GREEN_PIN, HIGH);
-  delay(250);
-  digitalWrite(LED_GREEN_PIN, LOW);
-  delay(250);
 
   // send status at boot and turn off
 #if (SEND_STATUS_AT_BOOT == 1u)

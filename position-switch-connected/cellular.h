@@ -24,6 +24,13 @@
 /****************************************************************************************
  * Type definitions
  ****************************************************************************************/
+typedef struct _SPTK_NET_INFO_ {
+  char * pchOperator;
+  char * pchNetTech;
+  char * pchBandTech;
+  float f32Rate;
+  int16_t s16Rssi;
+} sSptkNetInfo_t;
 
 /****************************************************************************************
  * Public function declarations
