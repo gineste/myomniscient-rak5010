@@ -28,7 +28,8 @@
 #define bg96_GPS_EN     39
 #define bg96_STATUS     31
 
-#define  GSM_RXBUF_MAXSIZE            1600
+#define  MAX_OPERATOR_NAME_LEN       (64u)
+#define  GSM_RXBUF_MAXSIZE           (1600)
 #define  GSM_GENER_CMD_LEN           (128)
 #define  MAX_CMD_LEN                 (1024u)
 
@@ -72,6 +73,43 @@ typedef enum _NETWORK_IP_STAT_ {
    NET_CTX_ACTIVATE          = '1',
 } eNetCtxStat_t;
 
+typedef enum _NETWORK_TECH_ {
+   NET_TECH_GSM                 = '0',
+   NET_TECH_LTE_M1              = '8',
+   NET_TECH_LTE_NB1             = '9'
+} eNetworkTech_t;
+
+typedef enum _NETWORK_STAT_ {
+   NET_STAT_DETACHED             = '0',
+   NET_STAT_ATTACHED             = '1',
+} eNetworkStat_t;
+
+typedef enum _NETWORK_MODE_ {
+   NET_MODE_AUTOMATIC           = '0',
+   NET_MODE_MANUAL_SELECTED     = '1',
+   NET_MODE_DEREGISTER          = '2',
+   NET_MODE_RESERVED1           = '3',
+   NET_MODE_MANUAL_AUTOMATIC    = '4'
+} eNetworkMode_t;
+
+typedef enum _NETWORK_REG_ {
+    NET_REG_STOPPED            = '0', /* Not registered. MT is not currently searching an operator to register to. */
+    NET_REG_REGISTERED         = '1', /* Registered, home network. */
+    NET_REG_SEARCHING          = '2', /* Not registered, but MT is currently trying to attach or searching an operator to */
+    NET_REG_DENIED             = '3', /* Registration denied */
+    NET_REG_UNKNOWN            = '4', /* Unknown */
+    NET_REG_ROAMING            = '5', /* Registered, roaming */
+} eNetworkRegisterState_t;
+
+typedef enum _CELLULAR_BAND_{
+  CELLULAR_BAND_GSM_800,
+  CELLULAR_BAND_GSM_900,
+  CELLULAR_BAND_GSM_1800,
+  CELLULAR_BAND_GSM_1900,
+  CELLULAR_BAND_LTE,
+  CELLULAR_BAND_COUNT
+}eCellularBand_t;
+
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
@@ -91,5 +129,7 @@ eBG96ErrorCode_t  eBG96_GetContextState(eNetCtxStat_t * p_peIpState, char * p_pc
 eBG96ErrorCode_t    eBG96_ActiveContext(void);
 eBG96ErrorCode_t    eBG96_SetRATSearchSeq(char * p_pchSearchSeq);
 eBG96ErrorCode_t    eBG96_GetRSSI(int16_t * p_ps16Rssi);
+eBG96ErrorCode_t    eBG96_GetNetworkInfo(char * p_pchAccessTech, char * p_pchBand, char * p_pchOperatorId, char * p_pchChannelId);
+eBG96ErrorCode_t    eBG96_GetNetwork(eNetworkMode_t *p_eNetworkMode, char * p_pchNetworkName, eNetworkTech_t *p_peNetworkTech);
 
 #endif /* BG96_H_ */

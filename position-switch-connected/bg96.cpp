@@ -24,15 +24,16 @@
 #include "timeout.h"
 #include "sensors.h"
 #include "config.h"
+#include "str_utils.h"
 
 #include "bg96.h"
 
 /****************************************************************************************
    Defines
  ****************************************************************************************/
-#define ON_TIMEOUT_MS    (5500u) /* ms */      // Doc BG96: wait at least 4.8s for waiting status pin outputting level
+#define ON_TIMEOUT_MS     (5500u) /* ms */      // Doc BG96: wait at least 4.8s for waiting status pin outputting level
 #define OFF_TIMEOUT_MS    (3000u) /* ms */
-#define OFF_TIME        (1000u)
+#define OFF_TIME          (1000u)
 
 #define PWRKEY_PULSE_ON_MS  (600u) /* ms */
 #define PWRKEY_PULSE_OFF_MS (700u) /* ms */
@@ -500,6 +501,95 @@ eBG96ErrorCode_t eBG96_GetRSSI(int16_t * p_ps16Rssi)
         l_eCode = BG96_ERROR_FAILED;
       }
     }
+  }
+
+  return l_eCode;
+}
+
+/**@brief Get the information about the current network used
+ * @param p_pchAccessTech
+ * @param p_pchBand
+ * @param p_pchOperatorId
+ * @param p_pchChannelId
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_GetNetworkInfo(char * p_pchAccessTech, char * p_pchBand, char * p_pchOperatorId, char * p_pchChannelId)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_PARAM;
+  char *l_apchArgv[5] = {0};
+  uint16_t l_u16Argc = 0u;
+  char *l_pchParams;
+
+  if ((p_pchAccessTech != NULL) && (p_pchBand != NULL) && (p_pchOperatorId != NULL) && (p_pchChannelId != NULL))
+  {
+    l_eCode = eBG96_SendCommandExpected("AT+QNWINFO", "+QNWINFO:", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+    if(BG96_SUCCESS == l_eCode)
+    {
+      l_pchParams = strstr(GSM_RSP, ": ");
+      if(l_pchParams != NULL)
+      {
+        l_pchParams+=2u;
+        l_u16Argc = u16SU_GetParamsFromString(l_pchParams, ',', l_apchArgv, 5u);
+
+        if(l_u16Argc == 5u)
+        {
+          strncpy(p_pchAccessTech,  &(l_apchArgv[0][1]), strlen(l_apchArgv[0]) - 2u); /* remove " " */
+          strncpy(p_pchOperatorId,  &(l_apchArgv[1][1]), strlen(l_apchArgv[1]) - 2u); /* remove " " */
+          strncpy(p_pchBand,      &(l_apchArgv[2][1]), strlen(l_apchArgv[2]) - 2u); /* remove " " */
+          strncpy(p_pchChannelId,   l_apchArgv[3], strlen(l_apchArgv[3]));
+          l_eCode = BG96_SUCCESS;
+        }else{
+          l_eCode = BG96_ERROR_FAILED;
+        }
+      }else{
+        l_eCode = BG96_ERROR_FAILED;
+      }
+    }
+  }else{
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+}
+
+/**@brief Request information about current operator
+ * @param p_eNetworkMode      Network mode used
+ * @param p_pchNetworkName    Operator name in ASCII
+ * @param p_peNetworkTech      Current network access technology
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_GetNetwork(eNetworkMode_t *p_eNetworkMode, char * p_pchNetworkName, eNetworkTech_t *p_peNetworkTech)
+{
+  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
+  uint8_t l_u8NetFormat = 0u; /* Field not used */
+  char *l_pchOperatorNameStart = NULL;
+  char *l_pchOperatorNameEnd = NULL;
+
+  if((p_eNetworkMode != NULL) && (p_pchNetworkName != NULL) && (p_peNetworkTech != NULL))
+  {
+    l_eCode = eBG96_SendCommandExpected("AT+COPS?", "+COPS:", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+
+    if(l_eCode == BG96_SUCCESS)
+    {
+      if(sscanf(GSM_RSP, "+COPS: %c,%c,\"%s\",%c", (uint8_t *)p_eNetworkMode, &l_u8NetFormat, p_pchNetworkName, (uint8_t *)p_peNetworkTech) > 0)
+      {
+        l_pchOperatorNameStart = strstr(GSM_RSP, "\"") + 1; /* skip " */
+        l_pchOperatorNameEnd = strstr(l_pchOperatorNameStart, "\"");
+
+        memset(p_pchNetworkName, 0, MAX_OPERATOR_NAME_LEN);
+        strncpy(p_pchNetworkName, l_pchOperatorNameStart, l_pchOperatorNameEnd - l_pchOperatorNameStart);
+
+        *p_peNetworkTech = (eNetworkTech_t) *(l_pchOperatorNameEnd+2);
+      }else{
+        p_pchNetworkName = "UNKNOWN";
+      }
+    }
+  }else{
+    l_eCode = BG96_ERROR_PARAM;
   }
 
   return l_eCode;

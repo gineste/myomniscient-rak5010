@@ -39,6 +39,12 @@ typedef volatile uint32_t REG32;
 #define MAC_ADDRESS_HIGH  (*(pREG32 (0x100000a8)))
 #define MAC_ADDRESS_LOW   (*(pREG32 (0x100000a4)))
 
+#define MAX_CHECK_NETWORK_RETRIES  (120u)
+#define MAX_CHECK_CONTEXT_RETRIES (3u)
+
+#define MAX_STR_LEN            (8u)
+#define MAX_STR_NETWORK_LEN     (32u)
+
 /****************************************************************************************
    Private type declarations
  ****************************************************************************************/
@@ -53,6 +59,14 @@ static void vCellular_PostHttp(String json);
  ****************************************************************************************/
   uint32_t addr_high = ((MAC_ADDRESS_HIGH) & 0x0000ffff) | 0x0000c000;
   uint32_t addr_low  = MAC_ADDRESS_LOW;
+
+static eNetworkTech_t g_eNetworkTech = NET_TECH_GSM;
+static eCellularBand_t g_eBandTech = CELLULAR_BAND_LTE;
+static char g_achNetworkName[MAX_OPERATOR_NAME_LEN + 1u] = {0u};
+static char g_achAccessTech[MAX_STR_LEN] = {0};
+static char g_achOperatorId[MAX_STR_LEN] = {0};
+static char g_achNetworkBand[MAX_STR_NETWORK_LEN] = {0};
+static char g_achChannel[MAX_STR_LEN] = {0};
   
 /****************************************************************************************
    Public functions
@@ -65,7 +79,11 @@ void vCellular_SendData(void) {
   eNetCtxStat_t l_eCtxState = NET_CTX_DEACTIVATE;
   char l_achIp[IP_MAX_SIZE] = {0};
   static uint16_t l_u16FrameCnt = 0u;
+  
   sSptkNetInfo_t l_sNetInfo = {0};      /* Status msg network info */
+  eNetworkStat_t l_eNetworkState = NET_STAT_DETACHED;
+  eNetworkMode_t l_eNetworkMode = NET_MODE_DEREGISTER;
+  eNetworkRegisterState_t l_eNetworkRegisterState = NET_REG_SEARCHING;
 
   s_SensorMngrData_t * l_psSensorsData = psSensorMngr_GetSensorData();
   
@@ -93,11 +111,22 @@ void vCellular_SendData(void) {
   
   eBG96_SendCommand("AT+QHTTPCFG=\"requestheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
-  /* Get network information */
-  /*l_sNetInfo.f32Rate = f32Cellular_GetRegisterRatio();
-  l_sNetInfo.pchOperator = pchCellular_GetLastOperatorName();
-  l_sNetInfo.pchNetTech = pchCellular_GetLastNetworkTech();
-  l_sNetInfo.pchBandTech = pchCellular_GetLastBandTech();*/
+  /* Get some network information */
+  memset(g_achNetworkName, 0, sizeof(g_achNetworkName));
+  eBG96_GetNetwork(&l_eNetworkMode, g_achNetworkName, &g_eNetworkTech);
+  
+  memset(g_achAccessTech, 0, sizeof(g_achAccessTech));
+  memset(g_achNetworkBand, 0, sizeof(g_achNetworkBand));
+  memset(g_achOperatorId, 0, sizeof(g_achOperatorId));
+  memset(g_achChannel, 0, sizeof(g_achChannel));
+
+  l_eBg96Code = eBG96_GetNetworkInfo(g_achAccessTech, g_achNetworkBand, g_achOperatorId, g_achChannel);
+  if(BG96_SUCCESS == l_eBg96Code)
+  {
+  #ifdef DEBUG
+    Serial.printf("Connect to %s, in %s on %s (ch%s)\r\n", g_achNetworkName, g_achAccessTech, g_achNetworkBand, g_achChannel);
+  #endif
+  }
 
   /* Get received signal strength */
   l_eBg96Code = eBG96_GetRSSI(&(l_sNetInfo.s16Rssi));
@@ -113,10 +142,11 @@ void vCellular_SendData(void) {
   snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": 10,\"altitude\": 30,\"accuracyType\": \"High\",\"position\": {\"lat\": 49.1235111233,\"lon\": 0.12321414141},"
                     "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
                     "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
-                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,\"network\": {\"RSSI\": %d}}}", 
+                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,"
+                    "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
                     (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
                     l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
-                    l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi);
+                    l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
 
   vCellular_PostHttp(String(l_achJson));
   
