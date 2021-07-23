@@ -154,14 +154,14 @@ void vCellular_SendData(void) {
   
   memset(l_achJson, 0, MAX_JSON_LEN);
   snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": %.1f,\"altitude\": %.1f,\"accuracyType\": \"High\",\"position\": {\"lat\": %f,\"lon\": %f},"
-                    "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
+                    "\"lastPositionUpdate\": %d},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
                     "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
                     "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": %d,\"batt_level\": %d,"
                     "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
-                    l_psSensorsData->sPosition.f32Hdop, l_psSensorsData->sPosition.f32Altitude, l_psSensorsData->sPosition.f32Latitude, l_psSensorsData->sPosition.f32Longitude,  
+                    l_psSensorsData->sPosition.f32Hdop, l_psSensorsData->sPosition.f32Altitude, l_psSensorsData->sPosition.f32Latitude, l_psSensorsData->sPosition.f32Longitude, l_psSensorsData->u32TsPosition,  
                     (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
                     l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
-                  l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt, l_u16BattMv, l_u8ChargeLevel, l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
+                    l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt, l_u16BattMv, l_u8ChargeLevel, l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
 
   vCellular_PostHttp(String(l_achJson));
 

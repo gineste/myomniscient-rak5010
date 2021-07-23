@@ -67,6 +67,7 @@ typedef struct __attribute__ ((__packed__)) _SENSOR_MNGR_DATA_  {
    uint8_t      au8TORs[TOR_NUMBER];          /* switch 0 : full ; switch 1 : empty */
    uint8_t      au8TORsPrevious[TOR_NUMBER];  /* previous TORs position */
    sPosition_t  sPosition;                    /* Last gps position */
+   uint32_t     u32TsPosition;                /* UTC timestamp of last position */
 }s_SensorMngrData_t;
 
 /****************************************************************************************
@@ -94,8 +95,9 @@ e_SensorMngr_ErrorCode_t eSensorMngr_UpdateSwitch(void);
 
 /**@brief   Function to set gps position.
  * @param   p_sPosition : GPS position
+ * @param   p_u32TsPosition : Timestamp UTC of position
  * @return  None
  */
-void vSensorMngr_PositionSet(sPosition_t p_sPosition);
+void vSensorMngr_PositionSet(sPosition_t p_sPosition, uint32_t p_u32TsPosition);
 
 #endif /* SENSORS_H_ */

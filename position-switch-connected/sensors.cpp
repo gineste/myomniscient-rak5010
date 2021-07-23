@@ -84,13 +84,16 @@ void vSensorMngr_TORStateSet(uint8_t p_u8TORIndex, uint8_t p_u8State)
 
 /**@brief   Function to set gps position.
  * @param   p_sPosition : GPS position
+ * @param   p_u32TsPosition : Timestamp UTC of position
  * @return  None
  */
-void vSensorMngr_PositionSet(sPosition_t p_sPosition)
+void vSensorMngr_PositionSet(sPosition_t p_sPosition, uint32_t p_u32TsPosition)
 {
   /* Copy Position in global variable */
   memcpy(&(g_sSensorsData.sPosition), &p_sPosition, sizeof(sPosition_t));
+  g_sSensorsData.u32TsPosition = p_u32TsPosition;
 }
+
 
 
 /****************************************************************************************

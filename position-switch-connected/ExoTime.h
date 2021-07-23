@@ -44,7 +44,7 @@
   #define EXOTIME_DELAYMS_30S           ((uint32_t)( 3*EXOTIME_DELAYMS_10S))
   #define EXOTIME_DELAYMS_60S           ((uint32_t)( 6*EXOTIME_DELAYMS_10S))
 
-  #define EXOTIME_UTC_OFFSET            ((int8_t)1)
+  #define EXOTIME_UTC_OFFSET            ((int8_t)0)
 
   #define EXOTIME_MIN_HOUR_VALUE        ((uint8_t)0)
   #define EXOTIME_MAX_HOUR_VALUE        ((uint8_t)23)
