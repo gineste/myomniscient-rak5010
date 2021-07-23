@@ -104,7 +104,7 @@ void vCellular_SendData(uint8_t p_eMsgType) {
   // Connect to network
   if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT))
   {
-    while(l_u8Retry < 200u)
+    while(l_u8Retry < 250u)
     {
       if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT))
       {

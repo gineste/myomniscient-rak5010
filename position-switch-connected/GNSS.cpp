@@ -64,7 +64,7 @@ eGnssCodes_t eGNSS_TurnOn(void)
   digitalWrite(bg96_GPS_EN, HIGH);
   vTime_WaitMs(10);
   
-  while(l_u8Retry < 200u)
+  while(l_u8Retry < 250u)
   {
     if (BG96_SUCCESS != eBG96_SendCommand("AT+QGPS=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT))
     {
