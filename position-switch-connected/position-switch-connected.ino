@@ -105,14 +105,12 @@ void setup()
   delay(5000);                    // necessary for BG96 boot on ext battery
   
   eBG96_TurnOn();
-
-#if (GET_GPS == 1u)
+  
   eGNSS_TurnOn();
   eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
   eGNSS_TurnOff();
-#endif
-    
-  vCellular_SendData();
+  
+  vCellular_SendData(CELLULAR_MSG_POSITION);
 #endif
 
   if (eBG96_TurnOff() != BG96_SUCCESS)
@@ -181,14 +179,8 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-
-#if (GET_GPS == 1u)
-    eGNSS_TurnOn();
-    eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
-    eGNSS_TurnOff();
-#endif
-    
-    vCellular_SendData();
+        
+    vCellular_SendData(CELLULAR_MSG_EVENT);
     
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
@@ -219,14 +211,8 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-
-#if (GET_GPS == 1u)
-    eGNSS_TurnOn();
-    eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
-    eGNSS_TurnOff();
-#endif
-    
-    vCellular_SendData();
+        
+    vCellular_SendData(CELLULAR_MSG_EVENT);
     
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {

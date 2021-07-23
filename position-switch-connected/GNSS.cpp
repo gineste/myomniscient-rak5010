@@ -57,6 +57,8 @@ static eGnssCodes_t eGNSS_GetPosition(sPosition_t * p_psPosition);
 eGnssCodes_t eGNSS_TurnOn(void)
 {
   eGnssCodes_t l_eCode = GNSS_ERROR_FAILED;
+  
+#if (ENABLE_GPS == 1)
   uint8_t l_u8Retry = 0u;;
   
   digitalWrite(bg96_GPS_EN, HIGH);
@@ -80,6 +82,7 @@ eGnssCodes_t eGNSS_TurnOn(void)
     l_eCode = GNSS_C_SUCCESS;
   }
 
+#endif
   return l_eCode;
 }
 
@@ -92,7 +95,7 @@ eGnssCodes_t eGNSS_TurnOn(void)
 eGnssCodes_t eGNSS_TurnOff(void)
 {
   eGnssCodes_t l_eCode = GNSS_ERROR_FAILED;
-
+#if (ENABLE_GPS == 1)
   if (BG96_SUCCESS == eBG96_SendCommand("AT+QGPSEND", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT))
   {
     l_eCode = GNSS_C_SUCCESS;
@@ -100,6 +103,7 @@ eGnssCodes_t eGNSS_TurnOff(void)
     l_eCode = GNSS_ERROR_FAILED;
   }
   digitalWrite(bg96_GPS_EN, LOW);
+#endif  // (ENABLE_GPS == 1)
 
   return l_eCode;
 }
@@ -111,6 +115,7 @@ eGnssCodes_t eGNSS_TurnOff(void)
 eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
 {
   eGnssCodes_t l_eGNSSCode = GNSS_ERROR_FAILED;
+#if (ENABLE_GPS == 1)
   uint32_t l_u32TimeStart = u32Time_getMs();
   uint32_t l_u32TimeOut = 0u;
   sPosition_t l_sPosition = {0};
@@ -187,6 +192,7 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
 
   /* Copy Position in global variable */
   vSensorMngr_PositionSet(l_sPosition, l_u32TimeStamp);
+#endif  // (ENABLE_GPS == 1)
 
   return l_eGNSSCode;
 }
@@ -198,6 +204,7 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
 {
   eBG96ErrorCode_t l_eBG96Code = BG96_SUCCESS;
   eGnssCodes_t l_eCode = GNSS_C_SUCCESS;
+#if (ENABLE_GPS == 1)
 
   char l_achGNSS_RSP[MAX_CMD_LEN] = {0};
   
@@ -311,7 +318,7 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
     Serial.println("GPS FAILED");
   #endif
   }
-
+#endif // (ENABLE_GPS == 1)
   return l_eCode;
 }
 

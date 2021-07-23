@@ -42,9 +42,14 @@ typedef enum _CELLULAR_ERR_CODE_{
   CELLULAR_ERROR_TIMEOUT
 }eCellularErrorCode_t;
 
+typedef enum _CELLULAR_MSG_TYPE_{
+  CELLULAR_MSG_EVENT,
+  CELLULAR_MSG_POSITION
+}eCellularMsgType_t;
+
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
- void vCellular_SendData(void);
+ void vCellular_SendData(uint8_t p_eMsgType);
 
 #endif /* CELLULAR_H_ */
