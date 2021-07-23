@@ -624,6 +624,34 @@ eBG96ErrorCode_t eBG96_GetBattInfos(uint8_t * p_pu8ChargeStatus, uint8_t * p_pu8
   return l_eCode;
 }
 
+/**@brief Queries the real time clock (RTC) of the module
+ * @param p_pchTimeStr : BG96 Time response
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_GetTime(char * p_pchTimeStr)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_PARAM;
+  if (p_pchTimeStr != NULL)
+  {
+    l_eCode = eBG96_SendCommandExpected("AT+CCLK?", "+CCLK:", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+    if(BG96_SUCCESS == l_eCode)
+    {
+      if(0 < sscanf(GSM_RSP, "+CCLK: %s", p_pchTimeStr))
+      {
+        l_eCode = BG96_SUCCESS;
+      }else{
+        l_eCode = BG96_ERROR_FAILED;
+      }
+    }
+  }else{
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+}
+
 /****************************************************************************************
    Private functions
  ****************************************************************************************/

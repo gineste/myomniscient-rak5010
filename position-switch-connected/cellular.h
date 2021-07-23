@@ -32,6 +32,16 @@ typedef struct _SPTK_NET_INFO_ {
   int16_t s16Rssi;
 } sSptkNetInfo_t;
 
+typedef enum _CELLULAR_ERR_CODE_{
+  CELLULAR_SUCCESS,
+   CELLULAR_ERROR_PARAM,
+  CELLULAR_ERROR_FAILED,
+  CELLULAR_ERROR_CONFIG,
+  CELLULAR_ERROR_APN,
+  CELLULAR_ERROR_NOT_REGISTERED,
+  CELLULAR_ERROR_TIMEOUT
+}eCellularErrorCode_t;
+
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
