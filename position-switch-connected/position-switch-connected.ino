@@ -179,7 +179,7 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-        
+  
     vCellular_SendData(CELLULAR_MSG_EVENT);
     
     if (eBG96_TurnOff() != BG96_SUCCESS)
@@ -189,12 +189,12 @@ void loop()
     Serial1.end();
   }
 
-  // check status msg send alarm
+  // check HB msg send alarm
   if ((STATUS_SEND_DUTY > 0) && (g_sStatemContext.u32lastStatusS >= STATUS_SEND_DUTY)) 
   {
     g_sStatemContext.u32lastStatusS = 0;
   #ifdef DEBUG
-    Serial.printf("send status\r\n");
+    Serial.printf("send HB\r\n");
   #endif
   
     // blink led twice
@@ -211,8 +211,12 @@ void loop()
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-        
-    vCellular_SendData(CELLULAR_MSG_EVENT);
+
+    eGNSS_TurnOn();
+    eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
+    eGNSS_TurnOff();
+  
+    vCellular_SendData(CELLULAR_MSG_POSITION);
     
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {

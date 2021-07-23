@@ -21,12 +21,12 @@
    Defines
  ****************************************************************************************/
 
-#define DEBUG
+//#define DEBUG
 #define SERIAL_BAUDRATE     (115200)
 
 #define SEND_STATUS_AT_BOOT (1u)             // send status at boot if def
 #define ENABLE_GPS          (1u)
-#define STATUS_SEND_DUTY    (1800u)          // period in seconds to send status  msg
+#define STATUS_SEND_DUTY    (3600u)          // period in seconds to send status  msg
 
 #define SERVER_URL          "https://webhook.site/15cc74bf-54b7-4b93-8746-c023eee63d32"
 #define APN_URL             "nxt17.net" //"sl2sfr"
