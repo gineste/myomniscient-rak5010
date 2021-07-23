@@ -482,7 +482,6 @@ eBG96ErrorCode_t eBG96_GetRSSI(int16_t * p_ps16Rssi)
 
   if (p_ps16Rssi != NULL)
   {
-    //l_eCode = eBG96_SendCommand("AT+CSQ", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
     l_eCode = eBG96_SendCommandExpected("AT+CSQ", "+CSQ:", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
     if(BG96_SUCCESS == l_eCode)
     {
@@ -585,6 +584,37 @@ eBG96ErrorCode_t eBG96_GetNetwork(eNetworkMode_t *p_eNetworkMode, char * p_pchNe
         *p_peNetworkTech = (eNetworkTech_t) *(l_pchOperatorNameEnd+2);
       }else{
         p_pchNetworkName = "UNKNOWN";
+      }
+    }
+  }else{
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+}
+
+/**@brief Get battery information
+ * @param p_pu8ChargeStatus : 0 not charging ; 1 charging ; 2 charge finished
+ * @param p_pu8ChargeLevel  : batt level in %
+ * @param p_pu16BattMv      : batt voltage in mv
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_GetBattInfos(uint8_t * p_pu8ChargeStatus, uint8_t * p_pu8ChargeLevel, uint16_t * p_pu16BattMv)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_PARAM;
+
+  if ((p_pu8ChargeStatus != NULL) && (p_pu8ChargeLevel != NULL) && (p_pu16BattMv != NULL))
+  {
+    l_eCode = eBG96_SendCommandExpected("AT+CBC", "+CBC:", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+    if(BG96_SUCCESS == l_eCode)
+    {
+      if(0 < sscanf(GSM_RSP, "+CBC: %hu,%hu,%hu\r\n", p_pu8ChargeStatus, p_pu8ChargeLevel, p_pu16BattMv))
+      {
+        l_eCode = BG96_SUCCESS;
+      }else{
+        l_eCode = BG96_ERROR_FAILED;
       }
     }
   }else{

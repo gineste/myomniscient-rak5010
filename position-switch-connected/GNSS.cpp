@@ -113,6 +113,9 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
   uint32_t l_u32TimeStart = u32Time_getMs();
   uint32_t l_u32TimeOut = 0u;
   sPosition_t l_sPosition = {0};
+  
+  //s_ExoTime_t l_sExoTime = {0};
+  uint32_t l_u32TimeStamp = 0u;
 
   if(p_u32TimeoutInSeconds > TIME_TO_FIX_MAX)
   {
@@ -158,6 +161,26 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
     l_sPosition.u8Month = 1u;
     l_sPosition.u8Year = 20u;
   }
+
+#if 0
+  /* Update timestamp UTC */
+  if (_SUCCESS == l_eGNSSCode)
+  {
+    /* Sync EPOC time */
+    l_sGPSPosition      = sSensorMngr_GetLastPosition();
+    l_sExoTime.u8Hour     = l_sGPSPosition.u8Hours;
+    l_sExoTime.u8Minute     = l_sGPSPosition.u8Minutes;
+    l_sExoTime.u8Second     = l_sGPSPosition.u8Seconds;
+    l_sExoTime.u8DayOfMonth = l_sGPSPosition.u8Day;
+    l_sExoTime.u8DayOfWeek  = 0u;   /* Not used */
+    l_sExoTime.u8Month    = l_sGPSPosition.u8Month;
+    l_sExoTime.u16Year    = l_sGPSPosition.u8Year;
+    if (EXOERRORS_NO == eDateToTimestamp(&l_sExoTime,&l_u32TimeStamp))
+    {
+      itsdk_time_sync_EPOC_s(l_u32TimeStamp);
+    }
+  }
+  #endif
 
   /* Copy Position in global variable */
   vSensorMngr_PositionSet(l_sPosition);

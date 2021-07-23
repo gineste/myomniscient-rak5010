@@ -131,5 +131,6 @@ eBG96ErrorCode_t    eBG96_SetRATSearchSeq(char * p_pchSearchSeq);
 eBG96ErrorCode_t    eBG96_GetRSSI(int16_t * p_ps16Rssi);
 eBG96ErrorCode_t    eBG96_GetNetworkInfo(char * p_pchAccessTech, char * p_pchBand, char * p_pchOperatorId, char * p_pchChannelId);
 eBG96ErrorCode_t    eBG96_GetNetwork(eNetworkMode_t *p_eNetworkMode, char * p_pchNetworkName, eNetworkTech_t *p_peNetworkTech);
+eBG96ErrorCode_t    eBG96_GetBattInfos(uint8_t * p_pu8ChargeStatus, uint8_t * p_pu8ChargeLevel, uint16_t * p_pu16BattMv);
 
 #endif /* BG96_H_ */

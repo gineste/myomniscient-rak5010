@@ -80,6 +80,9 @@ void vCellular_SendData(void) {
   char l_achIp[IP_MAX_SIZE] = {0};
   static uint16_t l_u16FrameCnt = 0u;
   uint8_t l_u8Retry = 0u;
+
+  uint8_t l_u8ChargeStatus, l_u8ChargeLevel = 0u;
+  uint16_t l_u16BattMv = 0u;
   
   sSptkNetInfo_t l_sNetInfo = {0};      /* Status msg network info */
   eNetworkStat_t l_eNetworkState = NET_STAT_DETACHED;
@@ -140,17 +143,25 @@ void vCellular_SendData(void) {
     Serial.printf("RSSI is %d dBm\r\n", l_sNetInfo.s16Rssi);
   #endif
   }
+
+  // Get battery voltage and charge level
+  if(BG96_SUCCESS == eBG96_GetBattInfos(&l_u8ChargeStatus, &l_u8ChargeLevel, &l_u16BattMv))
+  {
+  #ifdef DEBUG
+    Serial.printf("Batt infos : %hu%% ; %hu mV\r\n", l_u8ChargeLevel, l_u16BattMv);
+  #endif
+  }
   
   memset(l_achJson, 0, MAX_JSON_LEN);
   snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": %.1f,\"altitude\": %.1f,\"accuracyType\": \"High\",\"position\": {\"lat\": %f,\"lon\": %f},"
                     "\"lastPositionUpdate\": \"12332141244\"},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": \"123123123123123\","
                     "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
-                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": 3,"
+                    "\"messageType\": \"POSITION_MESSAGE\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": %d,\"batt_level\": %d,"
                     "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
                     l_psSensorsData->sPosition.f32Hdop, l_psSensorsData->sPosition.f32Altitude, l_psSensorsData->sPosition.f32Latitude, l_psSensorsData->sPosition.f32Longitude,  
                     (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF,
                     l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
-                  l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt,l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
+                  l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt, l_u16BattMv, l_u8ChargeLevel, l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
 
   vCellular_PostHttp(String(l_achJson));
 
@@ -174,8 +185,6 @@ static void vCellular_PostHttp(String json) {
   // configure URL
   memset(l_achCmd, 0, MAX_CMD_LEN);
   sprintf(l_achCmd, "AT+QHTTPURL=%d,80",url.length());
-  //bg96_at(l_achCmd);
-  //delay(1000);
   eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CMD_TIMEOUT);
   eBG96_SendCommand((char *)(url.c_str()), GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
 
@@ -201,7 +210,6 @@ static void vCellular_PostHttp(String json) {
   sprintf(l_achCmd, "AT+QHTTPPOST=%d,80,80",l_u16PostLen);
   if(BG96_SUCCESS == eBG96_SendCommand(l_achCmd, GSM_CONNECT_STR, CONN_TIMEOUT))
   {
-    //eBG96_SendCommand((char *)(payload.c_str()), GSM_CMD_RSP_OK_RF, CONN_TIMEOUT); 
     Serial1.print(payload);
     delay(3000);
   }
@@ -211,7 +219,7 @@ static void vCellular_PostHttp(String json) {
 /****************************************************************************************
    Private functions
  ****************************************************************************************/
-
+ 
 /****************************************************************************************
    End Of File
  ****************************************************************************************/
