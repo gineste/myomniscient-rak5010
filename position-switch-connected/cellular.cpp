@@ -93,6 +93,8 @@ void vCellular_SendData(uint8_t p_eMsgType) {
   uint8_t l_u8ChargeStatus, l_u8ChargeLevel = 0u;
   uint16_t l_u16BattMv = 0u;
   uint32_t l_u32TxTs = 0u;    // Tx timestamp UTC
+  uint32_t l_u32Timeout = 0u;
+  uint8_t l_u8Connected = 0u;
   
   sSptkNetInfo_t l_sNetInfo = {0};      /* Status msg network info */
   eNetworkStat_t l_eNetworkState = NET_STAT_DETACHED;
@@ -101,100 +103,109 @@ void vCellular_SendData(uint8_t p_eMsgType) {
 
   s_SensorMngrData_t * l_psSensorsData = psSensorMngr_GetSensorData();
 
-
   //eBG96_SetRATSearchSeq("01");  // GSM  (commented otherwise QIACT stuck...)
-  
+
+  l_u32Timeout = u32Time_getMs() + APN_TIMEOUT;
+
   // Connect to network
   if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT))
   {
-    while(l_u8Retry < 250u)
-    {
-      if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, APN_TIMEOUT))
+    while(u32Time_getMs() < l_u32Timeout)
+    {    
+      if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT))
       {
-        l_u8Retry++;
-        delay(100); 
+        #ifdef DEBUG
+          Serial.printf("Wait CGATT\r\n");
+        #endif
+        delay(100);
       }else{
+        l_u8Connected = 1u;
         break;
       }
-    }
-  }
-  
-  eBG96_SendCommand("AT+QCFG=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT); // needed otherwise QIACT stuck...
-  eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-
-  eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT); 
-
-  eBG96_SendCommand("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  eBG96_SendCommand("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-  
-  eBG96_SendCommand("AT+QHTTPCFG=\"requestheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
-
-  /* Get some network information */
-  memset(g_achNetworkName, 0, sizeof(g_achNetworkName));
-  eBG96_GetNetwork(&l_eNetworkMode, g_achNetworkName, &g_eNetworkTech);
-  
-  memset(g_achAccessTech, 0, sizeof(g_achAccessTech));
-  memset(g_achNetworkBand, 0, sizeof(g_achNetworkBand));
-  memset(g_achOperatorId, 0, sizeof(g_achOperatorId));
-  memset(g_achChannel, 0, sizeof(g_achChannel));
-
-  l_eBg96Code = eBG96_GetNetworkInfo(g_achAccessTech, g_achNetworkBand, g_achOperatorId, g_achChannel);
-  if(BG96_SUCCESS == l_eBg96Code)
-  {
-  #ifdef DEBUG
-    Serial.printf("Connect to %s, in %s on %s (ch%s)\r\n", g_achNetworkName, g_achAccessTech, g_achNetworkBand, g_achChannel);
-  #endif
+    } 
+  }else{
+    l_u8Connected = 1u;
   }
 
-  /* Get received signal strength */
-  l_eBg96Code = eBG96_GetRSSI(&(l_sNetInfo.s16Rssi));
-  if(BG96_SUCCESS == l_eBg96Code)
+  if(l_u8Connected == 1u)
   {
-  #ifdef DEBUG
-    Serial.printf("RSSI is %d dBm\r\n", l_sNetInfo.s16Rssi);
-  #endif
-  }
-
-  // Get battery voltage and charge level
-  if(BG96_SUCCESS == eBG96_GetBattInfos(&l_u8ChargeStatus, &l_u8ChargeLevel, &l_u16BattMv))
-  {
-  #ifdef DEBUG
-    Serial.printf("Batt infos : %hu%% ; %hu mV\r\n", l_u8ChargeLevel, l_u16BattMv);
-  #endif
-  }
-
-  // Sync TX timestamp UTC
-  eTxSyncTime(&l_u32TxTs);
+    eBG96_SendCommand("AT+QCFG=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT); // needed otherwise QIACT stuck...
+    eBG96_SendCommand("AT+QICSGP=1,1,\"nxt17.net\",\"\",\"\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   
-  memset(l_achJson, 0, MAX_JSON_LEN);
-
-  if (CELLULAR_MSG_POSITION == p_eMsgType)
-  {
-    snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": %.1f,\"altitude\": %.1f,\"position\": {\"lat\": %f,\"lon\": %f},"
-                      "\"lastPositionUpdate\": %d},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": %d,"
-                      "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
-                      "\"messageType\": \"HB\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": %d,"
-                      "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
-                      l_psSensorsData->sPosition.f32Hdop, l_psSensorsData->sPosition.f32Altitude, l_psSensorsData->sPosition.f32Latitude, l_psSensorsData->sPosition.f32Longitude, l_psSensorsData->u32TsPosition,  
-                      (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF, l_u32TxTs,
-                      l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
-                      l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt, l_u16BattMv, l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
-  }else if (CELLULAR_MSG_EVENT == p_eMsgType){
+    eBG96_SendCommand("AT+QIACT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT); 
+  
+    eBG96_SendCommand("AT+QHTTPCFG=\"contextid\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+    eBG96_SendCommand("AT+QHTTPCFG=\"responseheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
     
-    snprintf(l_achJson, MAX_JSON_LEN, "{\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": %d,"
-                  "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
-                  "\"messageType\": \"EVENT\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": %d,"
-                  "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
-                  (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF, l_u32TxTs,
-                  l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
-                  l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt, l_u16BattMv, l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
-  }
-
-  vCellular_PostHttp(String(l_achJson));
-
-  eBG96_SendCommand("AT+CGATT=0", GSM_CMD_RSP_OK_RF, DEACT_TIMEOUT); 
+    eBG96_SendCommand("AT+QHTTPCFG=\"requestheader\",1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
   
-  l_u16FrameCnt++;
+    /* Get some network information */
+    memset(g_achNetworkName, 0, sizeof(g_achNetworkName));
+    eBG96_GetNetwork(&l_eNetworkMode, g_achNetworkName, &g_eNetworkTech);
+    
+    memset(g_achAccessTech, 0, sizeof(g_achAccessTech));
+    memset(g_achNetworkBand, 0, sizeof(g_achNetworkBand));
+    memset(g_achOperatorId, 0, sizeof(g_achOperatorId));
+    memset(g_achChannel, 0, sizeof(g_achChannel));
+  
+    l_eBg96Code = eBG96_GetNetworkInfo(g_achAccessTech, g_achNetworkBand, g_achOperatorId, g_achChannel);
+    if(BG96_SUCCESS == l_eBg96Code)
+    {
+    #ifdef DEBUG
+      Serial.printf("Connect to %s, in %s on %s (ch%s)\r\n", g_achNetworkName, g_achAccessTech, g_achNetworkBand, g_achChannel);
+    #endif
+    }
+  
+    /* Get received signal strength */
+    l_eBg96Code = eBG96_GetRSSI(&(l_sNetInfo.s16Rssi));
+    if(BG96_SUCCESS == l_eBg96Code)
+    {
+    #ifdef DEBUG
+      Serial.printf("RSSI is %d dBm\r\n", l_sNetInfo.s16Rssi);
+    #endif
+    }
+  
+    // Get battery voltage and charge level
+    if(BG96_SUCCESS == eBG96_GetBattInfos(&l_u8ChargeStatus, &l_u8ChargeLevel, &l_u16BattMv))
+    {
+    #ifdef DEBUG
+      Serial.printf("Batt infos : %hu%% ; %hu mV\r\n", l_u8ChargeLevel, l_u16BattMv);
+    #endif
+    }
+  
+    // Sync TX timestamp UTC
+    eTxSyncTime(&l_u32TxTs);
+    
+    memset(l_achJson, 0, MAX_JSON_LEN);
+  
+    if (CELLULAR_MSG_POSITION == p_eMsgType)
+    {
+      snprintf(l_achJson, MAX_JSON_LEN, "{\"location\": {\"accuracy\": %.1f,\"altitude\": %.1f,\"position\": {\"lat\": %f,\"lon\": %f},"
+                        "\"lastPositionUpdate\": %d},\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": %d,"
+                        "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
+                        "\"messageType\": \"HB\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": %d,"
+                        "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
+                        l_psSensorsData->sPosition.f32Hdop, l_psSensorsData->sPosition.f32Altitude, l_psSensorsData->sPosition.f32Latitude, l_psSensorsData->sPosition.f32Longitude, l_psSensorsData->u32TsPosition,  
+                        (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF, l_u32TxTs,
+                        l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
+                        l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt, l_u16BattMv, l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
+    }else if (CELLULAR_MSG_EVENT == p_eMsgType){
+      
+      snprintf(l_achJson, MAX_JSON_LEN, "{\"manufacturer\": \"Rak\",\"manufacturerId\": \"%02X%02X%02X%02X%02X%02X\",\"lagTagUpdate\": %d,"
+                    "\"technology\": \"GPS\",\"metadataTag\": {TOR_state: {\"TOR1_current_state\": %d,\"TOR1_previous_state\": %d,\"TOR2_current_state\": %d,\"TOR2_previous_state\": %d},"
+                    "\"messageType\": \"EVENT\",\"sequenceCounter\": %d,\"eventType\": \"1\",\"profile\": {},\"voltage_int\": %d,"
+                    "\"network\": {\"RSSI\": %d,\"Operator\": \"%s\",\"Tech\": \"%s\",\"Band\": \"%s\"}}}", 
+                    (addr_high >> 8) & 0xFF, (addr_high) & 0xFF, (addr_low >> 24) & 0xFF,(addr_low >> 16) & 0xFF, (addr_low >> 8) & 0xFF, (addr_low) & 0xFF, l_u32TxTs,
+                    l_psSensorsData->au8TORs[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR1], l_psSensorsData->au8TORs[SENSOR_MNGR_TOR2], 
+                    l_psSensorsData->au8TORsPrevious[SENSOR_MNGR_TOR2], l_u16FrameCnt, l_u16BattMv, l_sNetInfo.s16Rssi, g_achNetworkName, g_achAccessTech, g_achNetworkBand);
+    }
+  
+    vCellular_PostHttp(String(l_achJson));
+  
+    eBG96_SendCommand("AT+CGATT=0", GSM_CMD_RSP_OK_RF, DEACT_TIMEOUT); 
+    
+    l_u16FrameCnt++;
+  }
 }
 
 static void vCellular_PostHttp(String json) {

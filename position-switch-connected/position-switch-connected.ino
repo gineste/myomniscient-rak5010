@@ -105,7 +105,6 @@ void setup()
 
   Serial1.begin(SERIAL_BAUDRATE);
   while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
-  delay(5000);                    // necessary for BG96 boot on ext battery
 
   eBG96_TurnOn();
 
@@ -180,7 +179,6 @@ void loop()
 
     Serial1.begin(SERIAL_BAUDRATE);
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
-    delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
 
     vCellular_SendData(CELLULAR_MSG_EVENT);
@@ -212,7 +210,6 @@ void loop()
 
     Serial1.begin(SERIAL_BAUDRATE);
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
-    delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
 
     eGNSS_TurnOn();
