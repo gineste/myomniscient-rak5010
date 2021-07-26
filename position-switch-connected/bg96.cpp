@@ -116,7 +116,6 @@ eBG96ErrorCode_t eBG96_SendCommandExpected(char *at,  const char * p_pchSearchSt
   {
     Serial1.write(at);
     Serial1.write('\r');
-    delay(10);
     memset(GSM_RSP, 0, 1600);
     l_eCode = eBG96_WaitResponse(GSM_RSP, p_u32Timeout, p_pchExpectedRsp);
     if(BG96_SUCCESS == l_eCode)
@@ -527,7 +526,7 @@ eBG96ErrorCode_t eBG96_GetNetworkInfo(char * p_pchAccessTech, char * p_pchBand, 
       {
         l_pchParams+=2u;
         l_u16Argc = u16SU_GetParamsFromString(l_pchParams, ',', l_apchArgv, 5u);
-
+        
         if(l_u16Argc == 5u)
         {
           strncpy(p_pchAccessTech,  &(l_apchArgv[0][1]), strlen(l_apchArgv[0]) - 2u); /* remove " " */
