@@ -38,7 +38,11 @@
 
 #define LED_GREEN_PIN (12)
 
-#define NRF_IO3       (34)
+
+// IOs declaration
+// NB: DO NOT USE NRF_IO3 otherwise it may crash at boot
+// because it is used as Serial gpio with bootloader
+#define NRF_IO2       (20)
 #define NRF_IO4       (33)
 
 /****************************************************************************************

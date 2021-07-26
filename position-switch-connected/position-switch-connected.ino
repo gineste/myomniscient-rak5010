@@ -45,12 +45,15 @@
 static void vUpdateTiming(void);        // update timings
 static void vStatem_ContextSetup(void); // setup context
 
+static void nrf_io2_it_cb();
+static void nrf_io4_it_cb();
+
 /****************************************************************************************
    Variable declarations
  ****************************************************************************************/
 static sStatemContext_t g_sStatemContext = {
-    .u64lastTimeUpdateMs = 0,     // in ms => last time we updated the timings
-    .u32lastStatusS = 0,          // time in S since last send over network
+  .u64lastTimeUpdateMs = 0,     // in ms => last time we updated the timings
+  .u32lastStatusS = 0,          // time in S since last send over network
 };
 
 static uint8_t g_u8SwitchEventReady = 0u;
@@ -73,43 +76,43 @@ void setup()
 #endif
 
   pinMode(LED_GREEN_PIN, OUTPUT);
-  pinMode(NRF_IO3, INPUT_PULLUP);
+  pinMode(NRF_IO2, INPUT_PULLUP);
   pinMode(NRF_IO4, INPUT_PULLUP);
 
-  attachInterrupt(digitalPinToInterrupt(NRF_IO3), nrf_io3_it_cb, FALLING);
+  attachInterrupt(digitalPinToInterrupt(NRF_IO2), nrf_io2_it_cb, FALLING);
   attachInterrupt(digitalPinToInterrupt(NRF_IO4), nrf_io4_it_cb, FALLING);
-  
+
   // blink led once
   digitalWrite(LED_GREEN_PIN, HIGH);
   delay(250);
   digitalWrite(LED_GREEN_PIN, LOW);
   delay(250);
-  
+
   vStatem_ContextSetup();
 
   vSensorMngr_Init();
-  vSensorMngr_TORStateSet(0, (digitalRead(NRF_IO3) == LOW));
+  vSensorMngr_TORStateSet(0, (digitalRead(NRF_IO2) == LOW));
   vSensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
 
   bg96_init();
 
   // send status at boot and turn off
 #if (SEND_STATUS_AT_BOOT == 1u)
-  #ifdef DEBUG
+#ifdef DEBUG
   Serial.printf("Send status at boot..\r\n");
   delay(100);
-  #endif
-  
+#endif
+
   Serial1.begin(SERIAL_BAUDRATE);
   while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
   delay(5000);                    // necessary for BG96 boot on ext battery
-  
+
   eBG96_TurnOn();
-  
+
   eGNSS_TurnOn();
   eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
   eGNSS_TurnOff();
-  
+
   vCellular_SendData(CELLULAR_MSG_POSITION);
 #endif
 
@@ -120,11 +123,11 @@ void setup()
 
 #if (SEND_STATUS_AT_BOOT == 1u)
   // TODO : test power cons after that condition
-  #ifdef DEBUG
-    Serial.printf("Serial 1 end\r\n");
-    delay(100);
-  #endif
-    Serial1.end();
+#ifdef DEBUG
+  Serial.printf("Serial 1 end\r\n");
+  delay(100);
+#endif
+  Serial1.end();
 #endif
 }
 
@@ -143,17 +146,17 @@ void loop()
   vUpdateTiming();
 
   if ((u32Time_getMs() - g_u32LastDebounceTime) > DEBOUNCE_DELAY_MS)
-  {  
-    l_u8State = (digitalRead(NRF_IO3) == LOW);    // pull up
-    
+  {
+    l_u8State = (digitalRead(NRF_IO2) == LOW);    // pull up
+
     if (l_u8State != u8SensorMngr_TORStateGet(SENSOR_MNGR_TOR2))
     {
       g_u8SwitchEventReady = 1u;
-      vSensorMngr_TORStateSet(SENSOR_MNGR_TOR2, (digitalRead(NRF_IO3) == LOW));
+      vSensorMngr_TORStateSet(SENSOR_MNGR_TOR2, (digitalRead(NRF_IO2) == LOW));
     }
 
     l_u8State = (digitalRead(NRF_IO4) == LOW);    // pull up
-    
+
     if (l_u8State != u8SensorMngr_TORStateGet(SENSOR_MNGR_TOR1))
     {
       g_u8SwitchEventReady = 1u;
@@ -174,14 +177,14 @@ void loop()
     delay(250);
     digitalWrite(LED_GREEN_PIN, LOW);
     delay(250);
-    
+
     Serial1.begin(SERIAL_BAUDRATE);
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
     eBG96_TurnOn();
-  
+
     vCellular_SendData(CELLULAR_MSG_EVENT);
-    
+
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
@@ -190,13 +193,13 @@ void loop()
   }
 
   // check HB msg send alarm
-  if ((STATUS_SEND_DUTY > 0) && (g_sStatemContext.u32lastStatusS >= STATUS_SEND_DUTY)) 
+  if ((STATUS_SEND_DUTY > 0) && (g_sStatemContext.u32lastStatusS >= STATUS_SEND_DUTY))
   {
     g_sStatemContext.u32lastStatusS = 0;
-  #ifdef DEBUG
+#ifdef DEBUG
     Serial.printf("send HB\r\n");
-  #endif
-  
+#endif
+
     // blink led twice
     digitalWrite(LED_GREEN_PIN, HIGH);
     delay(250);
@@ -206,7 +209,7 @@ void loop()
     delay(250);
     digitalWrite(LED_GREEN_PIN, LOW);
     delay(250);
-    
+
     Serial1.begin(SERIAL_BAUDRATE);
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     delay(5000);                    // necessary for BG96 boot on ext battery
@@ -215,9 +218,9 @@ void loop()
     eGNSS_TurnOn();
     eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
     eGNSS_TurnOff();
-  
+
     vCellular_SendData(CELLULAR_MSG_POSITION);
-    
+
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {
       eBG96_TurnOff();
@@ -234,7 +237,7 @@ void loop()
     digitalWrite(LED_GREEN_PIN, LOW);
     delay(250);
   }
-  
+
   delay(1000);
 }
 
@@ -243,24 +246,24 @@ void loop()
  ****************************************************************************************/
 
 /**
- * On every machine cycle, call the timing update;
- * The precision is 1S so the scheduler period should not be lower than 1s
- */
+   On every machine cycle, call the timing update;
+   The precision is 1S so the scheduler period should not be lower than 1s
+*/
 static void vUpdateTiming()
 {
   uint64_t now = u32Time_getMs();
-  uint32_t durationS =(uint32_t)((now - g_sStatemContext.u64lastTimeUpdateMs)/1000);
+  uint32_t durationS = (uint32_t)((now - g_sStatemContext.u64lastTimeUpdateMs) / 1000);
 
-  g_sStatemContext.u64lastTimeUpdateMs += (durationS*1000);
+  g_sStatemContext.u64lastTimeUpdateMs += (durationS * 1000);
   g_sStatemContext.u32lastStatusS += durationS;
 
 }
 
 /**
- * @brief Setup Statem context
- * @param None
- * @retval None
- */
+   @brief Setup Statem context
+   @param None
+   @retval None
+*/
 static void vStatem_ContextSetup(void)
 {
   /* context default values */
@@ -268,12 +271,12 @@ static void vStatem_ContextSetup(void)
   g_sStatemContext.u32lastStatusS = 0;
 }
 
-static void nrf_io3_it_cb() {
-    g_u32LastDebounceTime = u32Time_getMs();
+static void nrf_io2_it_cb() {
+  g_u32LastDebounceTime = u32Time_getMs();
 }
 
 static void nrf_io4_it_cb() {
-    g_u32LastDebounceTime = u32Time_getMs();
+  g_u32LastDebounceTime = u32Time_getMs();
 }
 
 /****************************************************************************************

@@ -37,8 +37,6 @@
 /****************************************************************************************
  * Private function declarations
  ****************************************************************************************/
-static void nrf_io3_it_cb(void);        // trailer full interrupt CB
-static void nrf_io4_it_cb(void);        // trailer empty interrupt CB
 
 /****************************************************************************************
  * Variable declarations
