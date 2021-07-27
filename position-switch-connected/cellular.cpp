@@ -3,7 +3,6 @@
      (  __)( \/ ) /  \ (_  _) (  )  / __)  / ___)( \/ )/ ___)(_  _)(  __)( \/ )/ ___)
       ) _)  )  ( (  O )  )(    )(  ( (__   \___ \ )  / \___ \  )(   ) _) / \/ \\___ \
      (____)(_/\_) \__/  (__)  (__)  \___)  (____/(__/  (____/ (__) (____)\_)(_/(____/
-
    Copyright (c) 2021 EXOTIC SYSTEMS. All Rights Reserved.
 
    Licensees are granted free, non-transferable use of the information. NO WARRANTY
@@ -23,7 +22,6 @@
 #include "BG96.h"
 #include "config.h"
 #include "sensors.h"
-#include "BG96_LTE.h"
 #include "ExoTime.h"
 #include "timeout.h"
 #include "GNSS.h"
@@ -42,15 +40,15 @@ typedef volatile uint32_t REG32;
 #define MAC_ADDRESS_HIGH  (*(pREG32 (0x100000a8)))
 #define MAC_ADDRESS_LOW   (*(pREG32 (0x100000a4)))
 
-#define MAX_CHECK_NETWORK_RETRIES  (120u)
-#define MAX_CHECK_CONTEXT_RETRIES (3u)
+#define MAX_CHECK_NETWORK_RETRIES   (120u)
+#define MAX_CHECK_CONTEXT_RETRIES   (3u)
 
-#define MAX_STR_LEN            (8u)
-#define MAX_STR_NETWORK_LEN     (32u)
+#define MAX_STR_LEN                 (8u)
+#define MAX_STR_NETWORK_LEN         (32u)
 
-#define BG96_TIME_CMD_LEN    (32u) /* Date time AT command response length */
+#define BG96_TIME_CMD_LEN           (32u) /* Date time AT command response length */
 
-#define TIME_SYNC_TRY_MAX      (uint8_t)20u
+#define TIME_SYNC_TRY_MAX           (uint8_t)20u
 
 /****************************************************************************************
    Private type declarations
@@ -112,6 +110,11 @@ void vCellular_SendData(uint8_t p_eMsgType) {
   {
     while(u32Time_getMs() < l_u32Timeout)
     {    
+    #if (WDG_ENABLE == 1u) 
+      // Reload the WDTs RR[0] reload register
+      NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+    #endif
+
       if (BG96_SUCCESS != eBG96_SendCommand("AT+CGATT=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT))
       {
         #ifdef DEBUG
@@ -362,6 +365,11 @@ static eCellularErrorCode_t eTxSyncTime(uint32_t * p_pu32TxTs)
     /* Try to sync BG96 time with network */
     do
     {
+    #if (WDG_ENABLE == 1u) 
+      // Reload the WDTs RR[0] reload register
+      NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+    #endif
+
       vTime_WaitMs(1000u);
       l_u8NbTry++;
   

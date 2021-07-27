@@ -21,29 +21,30 @@
    Defines
  ****************************************************************************************/
 
+// comment to disable debug infos
 //#define DEBUG
+
+#define WDG_ENABLE          (1u)
+#if (WDG_ENABLE == 1u)
+  #define TIMEOUT_WDG_S     (8)
+#endif
+
 #define SERIAL_BAUDRATE     (115200)
 
-#define SEND_STATUS_AT_BOOT (1u)             // send status at boot if def
+#define SEND_STATUS_AT_BOOT (1u)             // send HB msg at boot
 #define ENABLE_GPS          (1u)
-#define STATUS_SEND_DUTY    (3600u)          // period in seconds to send status  msg
-
-#define SERVER_URL          "https://webhook.site/15cc74bf-54b7-4b93-8746-c023eee63d32"
-#define APN_URL             "nxt17.net" //"sl2sfr"
-#define APN_USERNAME        ""
-#define APN_PASSWORD        ""
-
-#define BG96_RX_PIN  (6)
-#define BG96_TX_PIN  (8)
-
-#define LED_GREEN_PIN (12)
-
+#define STATUS_SEND_DUTY    (600u)          // period in seconds to send status  msg
 
 // IOs declaration
 // NB: DO NOT USE NRF_IO3 otherwise it may crash at boot
 // because it is used as Serial gpio with bootloader
 #define NRF_IO2       (20)
 #define NRF_IO4       (33)
+
+#define BG96_RX_PIN  (6)
+#define BG96_TX_PIN  (8)
+
+#define LED_GREEN_PIN (12)
 
 /****************************************************************************************
    Type definitions

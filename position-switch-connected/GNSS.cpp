@@ -66,6 +66,11 @@ eGnssCodes_t eGNSS_TurnOn(void)
   
   while(l_u8Retry < 250u)
   {
+  #if (WDG_ENABLE == 1u) 
+    // Reload the WDTs RR[0] reload register
+    NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+  #endif
+
     if (BG96_SUCCESS != eBG96_SendCommand("AT+QGPS=1", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT))
     {
       l_u8Retry++;
@@ -138,6 +143,11 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
       ((l_sPosition.f32Hdop <= 0.0f) || (l_sPosition.f32Hdop > 4.0f)) &&
       (u32Time_getMs() < l_u32TimeOut))
   {
+  #if (WDG_ENABLE == 1u) 
+    // Reload the WDTs RR[0] reload register
+    NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+  #endif
+
     /* Request for a position */
     l_eGNSSCode = eGNSS_GetPosition(&l_sPosition);
    #ifdef DEBUG
@@ -314,9 +324,6 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
   {
     /* no position */
     l_eCode = GNSS_ERROR_NO_POSITION;
-  #ifdef DEBUG
-    Serial.println("GPS FAILED");
-  #endif
   }
 #endif // (ENABLE_GPS == 1)
   return l_eCode;

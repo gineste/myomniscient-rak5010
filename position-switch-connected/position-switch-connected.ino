@@ -24,7 +24,6 @@
 
 #include "sensors.h"
 #include "BG96.h"
-#include "BG96_LTE.h"
 #include "GNSS.h"
 #include "cellular.h"
 #include "config.h"
@@ -88,13 +87,26 @@ void setup()
   digitalWrite(LED_GREEN_PIN, LOW);
   delay(250);
 
+#if (WDG_ENABLE == 1u) 
+  // Configure WDT.
+  NRF_WDT->CONFIG         = 0x01;     // Configure WDT to run when CPU is asleep
+  NRF_WDT->CRV            = (TIMEOUT_WDG_S * 32768) - 1;  // Timeout set to 120 seconds, timeout[s] = (CRV-1)/32768
+  NRF_WDT->RREN           = 0x01;     // Enable the RR[0] reload register
+  NRF_WDT->TASKS_START    = 1;        // Start WDT    
+#endif
+
+  // setup context
   vStatem_ContextSetup();
 
+  // Init sensors
   vSensorMngr_Init();
+
+  // Read TORs state
   vSensorMngr_TORStateSet(0, (digitalRead(NRF_IO2) == LOW));
   vSensorMngr_TORStateSet(1, (digitalRead(NRF_IO4) == LOW));
 
-  bg96_init();
+  // Init BG96
+  vBG96_Init();
 
   // send status at boot and turn off
 #if (SEND_STATUS_AT_BOOT == 1u)
@@ -121,11 +133,6 @@ void setup()
   }
 
 #if (SEND_STATUS_AT_BOOT == 1u)
-  // TODO : test power cons after that condition
-#ifdef DEBUG
-  Serial.printf("Serial 1 end\r\n");
-  delay(100);
-#endif
   Serial1.end();
 #endif
 }
@@ -143,6 +150,11 @@ void loop()
   Serial.printf("[%d] LOOP\r\n", (uint32_t) l_u64Timestamp);
 #endif
   vUpdateTiming();
+
+#if (WDG_ENABLE == 1u) 
+  // Reload the WDTs RR[0] reload register
+  NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+#endif
 
   if ((u32Time_getMs() - g_u32LastDebounceTime) > DEBOUNCE_DELAY_MS)
   {

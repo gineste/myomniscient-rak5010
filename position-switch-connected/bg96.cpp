@@ -65,8 +65,8 @@ static uint8_t Gsm_RxBuf[GSM_RXBUF_MAXSIZE];
 /****************************************************************************************
    Public functions
  ****************************************************************************************/
- //bg96 power up
-void bg96_init()
+ 
+void vBG96_Init(void)
 {
   pinMode(bg96_RESET, OUTPUT);
   pinMode(bg96_PWRKEY, OUTPUT);
@@ -76,11 +76,9 @@ void bg96_init()
 
   digitalWrite(bg96_RESET, 0);
   digitalWrite(bg96_W_DISABLE, 1);
-  //digitalWrite(bg96_GPS_EN, 1);
   digitalWrite(bg96_GPS_EN, 0);
 }
 
-//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
 {
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
@@ -106,7 +104,6 @@ eBG96ErrorCode_t eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint
   return l_eCode;
 }
 
-//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eBG96ErrorCode_t eBG96_SendCommandExpected(char *at,  const char * p_pchSearchStr, const char * p_pchExpectedRsp, uint32_t p_u32Timeout)
 {
   eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
@@ -136,23 +133,6 @@ eBG96ErrorCode_t eBG96_SendCommandExpected(char *at,  const char * p_pchSearchSt
   }
 
   return l_eCode;
-}
-
-//this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
-void bg96_at(char *at)
-{
-  char tmp[256] = {0};
-  int len = strlen(at);
-  strncpy(tmp, at, len);
-  tmp[len] = '\r';
-  Serial1.write(tmp);
-  delay(10);
-  while (Serial1.available()) {
-    bg96_rsp += char(Serial1.read());
-    delay(2);
-  }
-  Serial.println(bg96_rsp);
-  bg96_rsp = "";
 }
 
 eBG96ErrorCode_t eBG96_UpdateResponseStr(const char * p_pchSearchStr)
@@ -328,6 +308,11 @@ eBG96ErrorCode_t eBG96_WaitResponse(char *rsp_value, uint32_t timeout_ms, const 
   memset(GSM_RSP, 0, 1600);
   do
   {
+  #if (WDG_ENABLE == 1u) 
+    // Reload the WDTs RR[0] reload register
+    NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+  #endif
+    
     int c;
     c = Gsm_RxByte();
     if (c < 0)
@@ -402,48 +387,6 @@ eBG96ErrorCode_t eBG96_GetContextState(eNetCtxStat_t * p_peIpState, char * p_pch
   }
 
   return l_eCode;
-}
-
-/**@brief Set Apn information
-   @param p_pchApn         Apn operator address
-   @param p_pchUser        Apn access username
-   @param p_pchPassword    Apn access password
-
-   @info Always use IPv4 context
-
-   @retval BG96_SUCCESS
-   @retval BG96_ERROR_FAILED
-   @retval BG96_ERROR_PARAM
-*/
-eBG96ErrorCode_t eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword)
-{
-  eBG96ErrorCode_t l_eCode = BG96_SUCCESS;
-  char l_achCmd[MAX_CMD_LEN] = {0};
-
-  /* By default always use IPv4 context */
-  if ((p_pchApn != NULL) && (p_pchUser != NULL) && (p_pchPassword != NULL))
-  {
-    snprintf(l_achCmd, MAX_CMD_LEN, "AT+QICSGP=1,1,\"%s\",\"%s\",\"%s\",1", p_pchApn, p_pchUser, p_pchPassword);
-    bg96_at(l_achCmd);
-    l_eCode = BG96_SUCCESS;
-  } else {
-    l_eCode = BG96_ERROR_PARAM;
-  }
-
-  return l_eCode;
-
-}
-
-/**@brief Active TCP/IP context
-   @param p_pchIp         Allocated IP returned by server
-   @retval BG96_SUCCESS
-   @retval BG96_ERROR_FAILED
-   @retval BG96_ERROR_PARAM
-*/
-eBG96ErrorCode_t eBG96_ActiveContext(void)
-{
-  bg96_at("AT+QIACT=1");
-  return BG96_SUCCESS;
 }
 
 /**@brief Set the searching sequence of RATs
@@ -667,6 +610,11 @@ static eBG96Status_t eBG96_WaitStatus(uint8_t p_u8ExpectedState, uint32_t p_u32T
   /* Read status pin until status pin high or timeout */
   do
   {
+  #if (WDG_ENABLE == 1u) 
+    // Reload the WDTs RR[0] reload register
+    NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+  #endif
+
     l_eBG96_Status = eBG96_ReadStatusPin();
   }
   while ( (l_eBG96_Status != p_u8ExpectedState) && (l_u32Alarm >= u32Time_getMs()) );

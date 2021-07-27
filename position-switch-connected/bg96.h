@@ -113,20 +113,16 @@ typedef enum _CELLULAR_BAND_{
 /****************************************************************************************
  * Public function declarations
  ****************************************************************************************/
- eBG96ErrorCode_t   eBG96_TurnOn(void);
+eBG96ErrorCode_t    eBG96_TurnOn(void);
 eBG96ErrorCode_t    eBG96_TurnOff(void);
 
-void                bg96_init();         //bg96 power up
+void                vBG96_Init(void);
 eBG96ErrorCode_t    eBG96_SendCommand(char *at, const char * p_pchExpectedRsp, uint32_t p_u32Timeout);
 eBG96ErrorCode_t    eBG96_SendCommandExpected(char *at,  const char * p_pchSearchStr, const char * p_pchExpectedRsp, uint32_t p_u32Timeout);
 eBG96ErrorCode_t    eBG96_UpdateResponseStr(const char * p_pchSearchStr);
-void                bg96_at(char *at);   //this function is suitable for most AT commands of bg96. e.g. bg96_at("ATI")
 eBG96ErrorCode_t    eBG96_WaitResponse(char *rsp_value, uint32_t timeout_ms, const char * p_pchExpectedRsp);
 eBG96ErrorCode_t    eBG96_GetContextState(eNetCtxStat_t * p_peIpState, char * p_pchIp);
 
-
- eBG96ErrorCode_t   eBG96_SetApnContext(char * p_pchApn, char * p_pchUser, char * p_pchPassword);
-eBG96ErrorCode_t    eBG96_ActiveContext(void);
 eBG96ErrorCode_t    eBG96_SetRATSearchSeq(char * p_pchSearchSeq);
 eBG96ErrorCode_t    eBG96_GetRSSI(int16_t * p_ps16Rssi);
 eBG96ErrorCode_t    eBG96_GetNetworkInfo(char * p_pchAccessTech, char * p_pchBand, char * p_pchOperatorId, char * p_pchChannelId);

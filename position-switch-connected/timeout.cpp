@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <Arduino.h>
 
+#include "config.h"
+
 #include "timeout.h"
 
 /****************************************************************************************
@@ -56,9 +58,10 @@
     {
        do
        {
-/*#if (ITSDK_WITH_WDG == __WDG_IWDG)
-  wdg_refresh();
-#endif*/
+       #if (WDG_ENABLE == 1u) 
+         // Reload the WDTs RR[0] reload register
+         NRF_WDT->RR[0] = WDT_RR_RR_Reload; 
+       #endif
           /* Wait */
          l_u64TimeMs = u32Time_getMs();
        }while(l_u32TimerAlarm > l_u64TimeMs);
