@@ -33,7 +33,7 @@
 
 #define SEND_STATUS_AT_BOOT (1u)             // send HB msg at boot
 #define ENABLE_GPS          (1u)
-#define STATUS_SEND_DUTY    (600u)          // period in seconds to send status  msg
+#define STATUS_SEND_DUTY    (86400u)         // period in seconds to send status  msg
 
 // IOs declaration
 // NB: DO NOT USE NRF_IO3 otherwise it may crash at boot
