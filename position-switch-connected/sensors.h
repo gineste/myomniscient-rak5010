@@ -21,7 +21,7 @@
 /****************************************************************************************
  * Defines
  ****************************************************************************************/
-#define TIME_TO_FIX_MAX       (50u)   /* GPS time to fix max in seconds */
+#define TIME_TO_FIX_MAX       (120u)   /* GPS time to fix max in seconds */
 
 #define TOR_NUMBER            (2u)
 

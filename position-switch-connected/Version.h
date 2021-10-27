@@ -24,10 +24,10 @@
 #define BUILD_DATE   "0000-00-00"
 #define BUILD_TIME   "00:00:00"
 
-#define FW_VERSION   "1.0.0"
+#define FW_VERSION   "1.0.1"
 #define FW_VERSION_MAJOR	    (0x1)
 #define FW_VERSION_MINOR	    (0x0)
-#define FW_VERSION_REVISION   (0x0)
+#define FW_VERSION_REVISION   (0x1)
 
 #define HW_VERSION              "0.A"
 #define HW_VERSION_PCB          (0)

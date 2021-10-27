@@ -21,6 +21,7 @@
 #include <SoftwareSerial.h>
 #include <Arduino.h>
 #include <math.h>
+#include <stdint.h>
 
 #include "sensors.h"
 #include "BG96.h"
@@ -51,7 +52,7 @@ static void nrf_io4_it_cb();
    Variable declarations
  ****************************************************************************************/
 static sStatemContext_t g_sStatemContext = {
-  .u64lastTimeUpdateMs = 0,     // in ms => last time we updated the timings
+  .u32lastTimeUpdateS = 0,      // in s => last time we updated the timings
   .u32lastStatusS = 0,          // time in S since last send over network
 };
 
@@ -144,10 +145,10 @@ void setup()
 /**************************************************************************/
 void loop()
 {
-  uint64_t l_u64Timestamp = u32Time_getMs();
+  uint32_t l_u32Timestamp = u32Time_getMs();
   uint8_t l_u8State = 0u;
 #ifdef DEBUG
-  Serial.printf("[%d] LOOP\r\n", (uint32_t) l_u64Timestamp);
+  Serial.printf("[%d] LOOP\r\n", l_u32Timestamp);
 #endif
   vUpdateTiming();
 
@@ -260,10 +261,16 @@ void loop()
 */
 static void vUpdateTiming()
 {
-  uint64_t now = u32Time_getMs();
-  uint32_t durationS = (uint32_t)((now - g_sStatemContext.u64lastTimeUpdateMs) / 1000);
+  uint32_t now = (u32Time_getMs() / 1000u);
+  uint32_t durationS = 0u;
 
-  g_sStatemContext.u64lastTimeUpdateMs += (durationS * 1000);
+  if (now < g_sStatemContext.u32lastTimeUpdateS){
+    durationS = UINT32_MAX - g_sStatemContext.u32lastTimeUpdateS + now;
+  }else{
+    durationS = now - g_sStatemContext.u32lastTimeUpdateS; 
+  }
+
+  g_sStatemContext.u32lastTimeUpdateS += durationS;
   g_sStatemContext.u32lastStatusS += durationS;
 
 }
@@ -276,7 +283,7 @@ static void vUpdateTiming()
 static void vStatem_ContextSetup(void)
 {
   /* context default values */
-  g_sStatemContext.u64lastTimeUpdateMs = 0;
+  g_sStatemContext.u32lastTimeUpdateS = 0;
   g_sStatemContext.u32lastStatusS = 0;
 }
 
