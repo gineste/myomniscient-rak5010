@@ -124,6 +124,8 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
   uint32_t l_u32TimeStart = u32Time_getMs();
   uint32_t l_u32TimeOut = 0u;
   sPosition_t l_sPosition = {0};
+
+  float l_fHoriUnc, l_fVertUnc, l_fSpeedUnc, l_fHeadUnc = 0.0f;
   
   s_ExoTime_t l_sExoTime = {0};
   uint32_t l_u32TimeStamp = 0u;
@@ -170,12 +172,36 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
   Serial.printf("[%u] GNSSFIX (%u ms)\r\n", (unsigned int)u32Time_getMs(), (unsigned int)(u32Time_getMs() - l_u32TimeStart));
 #endif
 
+  /* Otherwise get estimated position error */
+  if (BG96_SUCCESS == eBG96_GetEstimatedPositionError(&l_fHoriUnc, &l_fVertUnc, &l_fSpeedUnc, &l_fHeadUnc))
+  {
+    #ifdef DEBUG
+      Serial.printf("Hori unc = %f meters\r\n", l_fHoriUnc);
+    #endif
+  }else{
+    #ifdef DEBUG
+      Serial.printf("GNSS estimated position error FAILED\r\n");
+    #endif
+  }
+
   /* If fix gps failed then set default values */
   if(l_sPosition.f32Hdop == 0.0f)
   {
     l_sPosition.u8Day = 1u;
     l_sPosition.u8Month = 1u;
     l_sPosition.u8Year = 20u;
+  }else if((l_sPosition.f32Hdop > 0.0f) && (l_sPosition.f32Hdop <= 4.0f)) {
+    /* Otherwise get estimated position error */
+    /*if (BG96_SUCCESS == eBG96_GetEstimatedPositionError(&l_fHoriUnc, &l_fVertUnc, &l_fSpeedUnc, &l_fHeadUnc))
+    {
+      #ifdef DEBUG
+        Serial.printf("Hori unc = %f meters\r\n", l_fHoriUnc);
+      #endif
+    }else{
+      #ifdef DEBUG
+        Serial.printf("GNSS estimated position error FAILED\r\n");
+      #endif
+    }*/
   }
 
   /* Update timestamp UTC */

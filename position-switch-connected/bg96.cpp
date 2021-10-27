@@ -566,6 +566,46 @@ eBG96ErrorCode_t eBG96_GetBattInfos(uint8_t * p_pu8ChargeStatus, uint8_t * p_pu8
   return l_eCode;
 }
 
+/**@brief Get estimated position error
+ * @param p_pfHoriUnc   : Float type. Horizontal estimated position error. Unit: meter
+ * @param p_pfVertUnc   : Float type. Vertical estimated position error. Unit: meter
+   @param p_pfSpeedUnc  : Float type. Horizontal estimated velocity error. Unit: m/s
+   @param p_pfHeadUnc   : Float type. Estimated heading error. Unit: degree,
+ * @retval BG96_SUCCESS
+ * @retval BG96_ERROR_FAILED
+ * @retval BG96_ERROR_PARAM
+ */
+eBG96ErrorCode_t eBG96_GetEstimatedPositionError(float * p_pfHoriUnc, float * p_pfVertUnc, float * p_pfSpeedUnc, float * p_pfHeadUnc)
+{
+  eBG96ErrorCode_t l_eCode = BG96_ERROR_PARAM;
+
+  if ((p_pfHoriUnc != NULL) && (p_pfVertUnc != NULL) && (p_pfSpeedUnc != NULL) && (p_pfHeadUnc != NULL))
+  {
+    l_eCode = eBG96_SendCommandExpected("AT+QGPSCFG=\"estimation_error\"", "+QGPSCFG:", GSM_CMD_RSP_OK_RF, CMD_TIMEOUT);
+    if(BG96_SUCCESS == l_eCode)
+    {
+      if(0 < sscanf(GSM_RSP, "+QGPSCFG: \"estimation_error\",%f,%f,%f,%f\r\n", p_pfHoriUnc, p_pfVertUnc, p_pfSpeedUnc, p_pfHeadUnc))
+      {
+        l_eCode = BG96_SUCCESS;
+      #ifdef DEBUG
+        Serial.printf("Hori unc = %f meters\r\n", *p_pfHoriUnc);
+        Serial.printf("Vert unc = %f meters\r\n", *p_pfVertUnc);
+        Serial.printf("Head unc = %f meters\r\n", *p_pfHeadUnc);
+      #endif
+      }else{
+      #ifdef DEBUG
+        Serial.printf("Esti position error cmd FAILED\r\n");
+      #endif
+        l_eCode = BG96_ERROR_FAILED;
+      }
+    }
+  }else{
+    l_eCode = BG96_ERROR_PARAM;
+  }
+
+  return l_eCode;
+}
+
 /**@brief Queries the real time clock (RTC) of the module
  * @param p_pchTimeStr : BG96 Time response
  * @retval BG96_SUCCESS

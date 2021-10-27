@@ -129,5 +129,6 @@ eBG96ErrorCode_t    eBG96_GetNetworkInfo(char * p_pchAccessTech, char * p_pchBan
 eBG96ErrorCode_t    eBG96_GetNetwork(eNetworkMode_t *p_eNetworkMode, char * p_pchNetworkName, eNetworkTech_t *p_peNetworkTech);
 eBG96ErrorCode_t    eBG96_GetBattInfos(uint8_t * p_pu8ChargeStatus, uint8_t * p_pu8ChargeLevel, uint16_t * p_pu16BattMv);
 eBG96ErrorCode_t    eBG96_GetTime(char * p_pchTimeStr);
+eBG96ErrorCode_t    eBG96_GetEstimatedPositionError(float * p_pfHoriUnc, float * p_pfVertUnc, float * p_pfSpeedUnc, float * p_pfHeadUnc);
 
 #endif /* BG96_H_ */
