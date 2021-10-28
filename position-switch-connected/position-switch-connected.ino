@@ -125,7 +125,7 @@ void setup()
   eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
   eGNSS_TurnOff();
 
-  vCellular_SendData(CELLULAR_MSG_POSITION);
+  vCellular_SendData(CELLULAR_MSG_HB);
 #endif
 
   if (eBG96_TurnOff() != BG96_SUCCESS)
@@ -189,10 +189,14 @@ void loop()
     delay(250);
     digitalWrite(LED_GREEN_PIN, LOW);
     delay(250);
-
+    
     Serial1.begin(SERIAL_BAUDRATE);
     while ( !Serial1 ) delay(10);   // for bg96 with uart1, softserial is limited in baudrate
     eBG96_TurnOn();
+
+    eGNSS_TurnOn();
+    eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
+    eGNSS_TurnOff();
 
     vCellular_SendData(CELLULAR_MSG_EVENT);
 
@@ -229,7 +233,7 @@ void loop()
     eGNSS_UpdatePosition(TIME_TO_FIX_MAX);
     eGNSS_TurnOff();
 
-    vCellular_SendData(CELLULAR_MSG_POSITION);
+    vCellular_SendData(CELLULAR_MSG_HB);
 
     if (eBG96_TurnOff() != BG96_SUCCESS)
     {

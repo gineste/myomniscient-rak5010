@@ -44,7 +44,7 @@ typedef enum _CELLULAR_ERR_CODE_{
 
 typedef enum _CELLULAR_MSG_TYPE_{
   CELLULAR_MSG_EVENT,
-  CELLULAR_MSG_POSITION
+  CELLULAR_MSG_HB
 }eCellularMsgType_t;
 
 /****************************************************************************************
