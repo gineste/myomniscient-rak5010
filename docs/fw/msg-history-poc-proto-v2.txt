@@ -1,0 +1,249 @@
+16/11/21 11h13
+{
+  "location": {
+    "accuracy": 0,
+    "altitude": 0,
+    "position": {
+      "lat": 51.208111,
+      "lon": 0
+    },
+    "lastPositionUpdate": 0
+  },
+  "manufacturer": "Rak",
+  "manufacturerId": "F337CE43B1CC",
+  "lagTagUpdate": 1637057556,
+  "technology": "GPS",
+  "metadataTag": {
+    "TOR_state": {
+      "TOR1_current_state": 0,
+      "TOR1_previous_state": 1,
+      "TOR2_current_state": 1,
+      "TOR2_previous_state": 0
+    },
+    "messageType": "EVENT",
+    "sequenceCounter": 20,
+    "eventType": "1",
+    "profile": {},
+    "voltage_int": 3989,
+    "network": {
+      "RSSI": -69,
+      "Operator": "O2 - UK Tele2 IoT",
+      "Tech": "EDGE",
+      "Band": "GSM 900"
+    }
+  }
+}
+
+
+16/11/21 11h13
+{
+  "location": {
+    "accuracy": 0,
+    "altitude": 0,
+    "position": {
+      "lat": 51.207932,
+      "lon": 0
+    },
+    "lastPositionUpdate": 0
+  },
+  "manufacturer": "Rak",
+  "manufacturerId": "C329B763AF48",
+  "lagTagUpdate": 1637057523,
+  "technology": "GPS",
+  "metadataTag": {
+    "TOR_state": {
+      "TOR1_current_state": 0,
+      "TOR1_previous_state": 1,
+      "TOR2_current_state": 1,
+      "TOR2_previous_state": 0
+    },
+    "messageType": "EVENT",
+    "sequenceCounter": 19,
+    "eventType": "1",
+    "profile": {},
+    "voltage_int": 3985,
+    "network": {
+      "RSSI": -67,
+      "Operator": "EE Tele2 IoT",
+      "Tech": "EDGE",
+      "Band": "GSM 1800"
+    }
+  }
+}
+
+
+16/11/21 9h37
+{
+  "location": {
+    "accuracy": 0,
+    "altitude": 0,
+    "position": {
+      "lat": 51.20797,
+      "lon": 0
+    },
+    "lastPositionUpdate": 0
+  },
+  "manufacturer": "Rak",
+  "manufacturerId": "C329B763AF48",
+  "lagTagUpdate": 1637051822,
+  "technology": "GPS",
+  "metadataTag": {
+    "TOR_state": {
+      "TOR1_current_state": 1,
+      "TOR1_previous_state": 0,
+      "TOR2_current_state": 0,
+      "TOR2_previous_state": 1
+    },
+    "messageType": "HB",
+    "sequenceCounter": 16,
+    "profile": {},
+    "voltage_int": 3993,
+    "network": {
+      "RSSI": -67,
+      "Operator": "EE Tele2 IoT",
+      "Tech": "EDGE",
+      "Band": "GSM 1800"
+    }
+  }
+}
+
+15/11/21 9h47
+{
+  "location": {
+    "accuracy": 0,
+    "altitude": 0,
+    "position": {
+      "lat": 0,
+      "lon": 0
+    },
+    "lastPositionUpdate": 0
+  },
+  "manufacturer": "Rak",
+  "manufacturerId": "F337CE43B1CC",
+  "lagTagUpdate": 1636966002,
+  "technology": "GPS",
+  "metadataTag": {
+    "TOR_state": {
+      "TOR1_current_state": 1,
+      "TOR1_previous_state": 0,
+      "TOR2_current_state": 0,
+      "TOR2_previous_state": 1
+    },
+    "messageType": "HB",
+    "sequenceCounter": 16,
+    "profile": {},
+    "voltage_int": 4008,
+    "network": {
+      "RSSI": -75,
+      "Operator": "O2 - UK Tele2 IoT",
+      "Tech": "EDGE",
+      "Band": "GSM 900"
+    }
+  }
+}
+
+14/11/21 9h38
+{
+  "location": {
+    "accuracy": 0,
+    "altitude": 0,
+    "position": {
+      "lat": 51.208221,
+      "lon": 0
+    },
+    "lastPositionUpdate": 0
+  },
+  "manufacturer": "Rak",
+  "manufacturerId": "C329B763AF48",
+  "lagTagUpdate": 1636879062,
+  "technology": "GPS",
+  "metadataTag": {
+    "TOR_state": {
+      "TOR1_current_state": 1,
+      "TOR1_previous_state": 0,
+      "TOR2_current_state": 0,
+      "TOR2_previous_state": 1
+    },
+    "messageType": "HB",
+    "sequenceCounter": 14,
+    "profile": {},
+    "voltage_int": 4007,
+    "network": {
+      "RSSI": -75,
+      "Operator": "EE Tele2 IoT",
+      "Tech": "EDGE",
+      "Band": "GSM 1800"
+    }
+  }
+}
+
+13/11/21 9h48
+{
+  "location": {
+    "accuracy": 0,
+    "altitude": 0,
+    "position": {
+      "lat": 0,
+      "lon": 0
+    },
+    "lastPositionUpdate": 0
+  },
+  "manufacturer": "Rak",
+  "manufacturerId": "F337CE43B1CC",
+  "lagTagUpdate": 1636793254,
+  "technology": "GPS",
+  "metadataTag": {
+    "TOR_state": {
+      "TOR1_current_state": 1,
+      "TOR1_previous_state": 0,
+      "TOR2_current_state": 0,
+      "TOR2_previous_state": 1
+    },
+    "messageType": "HB",
+    "sequenceCounter": 14,
+    "profile": {},
+    "voltage_int": 4029,
+    "network": {
+      "RSSI": -71,
+      "Operator": "O2 - UK Tele2 IoT",
+      "Tech": "EDGE",
+      "Band": "GSM 900"
+    }
+  }
+}
+
+
+13/11/21 9h38
+{
+  "location": {
+    "accuracy": 0,
+    "altitude": 0,
+    "position": {
+      "lat": 51.208099,
+      "lon": 0
+    },
+    "lastPositionUpdate": 0
+  },
+  "manufacturer": "Rak",
+  "manufacturerId": "C329B763AF48",
+  "lagTagUpdate": 1636792681,
+  "technology": "GPS",
+  "metadataTag": {
+    "TOR_state": {
+      "TOR1_current_state": 1,
+      "TOR1_previous_state": 0,
+      "TOR2_current_state": 0,
+      "TOR2_previous_state": 1
+    },
+    "messageType": "HB",
+    "sequenceCounter": 13,
+    "profile": {},
+    "voltage_int": 4001,
+    "network": {
+      "RSSI": -67,
+      "Operator": "EE Tele2 IoT",
+      "Tech": "EDGE",
+      "Band": "GSM 1800"
+    }
+  }
+}
