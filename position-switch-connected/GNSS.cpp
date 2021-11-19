@@ -229,7 +229,7 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
   Serial1.write("AT+QGPSLOC=2\r");
   l_eBG96Code = eBG96_WaitResponse(l_achGNSS_RSP, CMD_TIMEOUT, GSM_CMD_RSP_OK_RF);
 
-  if ((l_eBG96Code == GNSS_C_SUCCESS) && (p_psPosition != NULL))
+  if ((l_eBG96Code == BG96_SUCCESS) && (p_psPosition != NULL))
   {
       /* init buffers */
       memset(l_sLatitude, 0, 15);
@@ -239,9 +239,9 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
       memset(l_sCourseOverGround, 0, 10);
       memset(l_sSpeedKph, 0, 10);
       memset(l_sSpeedKnots, 0, 10);
-
+      
       /* parse response */
-      l_s32scanResult  = sscanf(strstr(l_achGNSS_RSP, "+QGPSLOC:"), "+QGPSLOC: %d.%d,%[0-9.],%[0-9.],%[0-9.],%[0-9.],%c,%[0-9.],%[0-9.],%[0-9.],%d,%hu",
+      l_s32scanResult  = sscanf(strstr(l_achGNSS_RSP, "+QGPSLOC:"), "+QGPSLOC: %d.%d,%[-+0-9.],%[-+0-9.],%[0-9.],%[-+0-9.],%c,%[0-9.],%[0-9.],%[0-9.],%d,%hu",
                             (int*) & (l_s32Time),
                             (int*) & (l_s32DecimalTime),
                             l_sLatitude,
@@ -254,6 +254,7 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
                             l_sSpeedKnots,
                             (int*) & (l_s32Date),
                             &(p_psPosition->u16Satellites));
+      
 
        /* convert to float */
        p_psPosition->f32Latitude = atof(l_sLatitude);
@@ -328,6 +329,72 @@ eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds)
 #endif // (ENABLE_GPS == 1)
   return l_eCode;
 }
+
+void vGNSS_TestParsePosition(void)
+{
+  sPosition_t l_sPosition = {0};
+  
+  /* Exotic GPSLOC example: +QGPSLOC: 092416.0,45.78489,3.14041,1.6,403.0,2,0.00,0.0,0.0,191121,09 */
+  char l_achGPSLOC[MAX_CMD_LEN] = "+QGPSLOC: 092416.0,45.78489,-3.14041,1.6,32.0,2,0.00,0.0,0.0,191121,09";
+  int32_t l_s32scanResult = -1;
+  int32_t l_s32Time = 0;
+  int32_t l_s32DecimalTime = 0;
+  int32_t l_s32Date = 0;
+  char l_sLatitude[15u], l_sLongitude[15u], l_sHdop[5u], l_sAltitude[10u], l_sCourseOverGround[10u], l_sSpeedKph[10u], l_sSpeedKnots[10u] = {0};
+  
+  /* fake gpsloc  */
+  Serial.printf("%s\r\n", l_achGPSLOC);
+  
+  /* init buffers */
+  memset(l_sLatitude, 0, 15);
+  memset(l_sLongitude, 0, 15);
+  memset(l_sHdop, 0, 5);
+  memset(l_sAltitude, 0, 10);
+  memset(l_sCourseOverGround, 0, 10);
+  memset(l_sSpeedKph, 0, 10);
+  memset(l_sSpeedKnots, 0, 10);
+      
+  /* parse gpsloc */
+  l_s32scanResult  = sscanf(l_achGPSLOC, "+QGPSLOC: %d.%d,%[-+0-9.],%[-+0-9.],%[0-9.],%[-+0-9.],%c,%[0-9.],%[0-9.],%[0-9.],%d,%hu",
+                        (int*) & (l_s32Time),
+                        (int*) & (l_s32DecimalTime),
+                        l_sLatitude,
+                        l_sLongitude,
+                        l_sHdop,
+                        l_sAltitude,
+                        &(l_sPosition.u8FixType),
+                        l_sCourseOverGround,
+                        l_sSpeedKph,
+                        l_sSpeedKnots,
+                        (int*) & (l_s32Date),
+                        &(l_sPosition.u16Satellites));
+
+   /* convert to float */
+   l_sPosition.f32Latitude = atof(l_sLatitude);
+   l_sPosition.f32Longitude = atof(l_sLongitude);
+   l_sPosition.f32Hdop = atof(l_sHdop);
+   l_sPosition.f32Altitude = atof(l_sAltitude);
+   l_sPosition.f32CourseOverGround = atof(l_sCourseOverGround);
+   l_sPosition.f32Speedkph = atof(l_sSpeedKph);
+   l_sPosition.f32Speedknots = atof(l_sSpeedKnots);
+       
+#ifdef DEBUG
+    //Serial.printf("Date = %u/%u/%u %u:%u:%u\r\n", p_psPosition->u8Day, p_psPosition->u8Month, 
+                    //p_psPosition->u8Year, p_psPosition->u8Hours, p_psPosition->u8Minutes, p_psPosition->u8Seconds);
+                    
+    Serial.printf("Lat = %f\r\n", l_sPosition.f32Latitude);
+    Serial.printf("Long = %f\r\n", l_sPosition.f32Longitude);
+    Serial.printf("Hdop = %f\r\n", l_sPosition.f32Hdop);
+    Serial.printf("altitude = %f\r\n", l_sPosition.f32Altitude);
+    Serial.printf("Fix type = %u\r\n", l_sPosition.u8FixType);
+    Serial.printf("course over ground = %f\r\n", l_sPosition.f32CourseOverGround);
+    Serial.printf("speed kph = %f\r\n", l_sPosition.f32Speedkph);
+    Serial.printf("speed knots = %f\r\n", l_sPosition.f32Speedknots);
+    Serial.printf("satellites = %hu\r\n", l_sPosition.u16Satellites);
+#endif
+}
+
+
 
 /****************************************************************************************
    End Of File

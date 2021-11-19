@@ -38,5 +38,6 @@ typedef enum _GNSS_CODES_ {
  eGnssCodes_t eGNSS_TurnOn(void);
  eGnssCodes_t eGNSS_TurnOff(void);
  eGnssCodes_t eGNSS_UpdatePosition(uint32_t p_u32TimeoutInSeconds);
+ void vGNSS_TestParsePosition(void);
 
 #endif /* GNSS_H_ */
